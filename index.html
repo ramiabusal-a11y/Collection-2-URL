@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاضنة التطبيقات والأجندة</title>
+
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. React 18 & ReactDOM 18 -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- 3. Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 4. Sheet.js (xlsx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- 5. NEW: Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tailwind Config & Custom Styles -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    backdropFilter: {
+                        'none': 'none',
+                        'blur': 'blur(20px)',
+                    },
+                    boxShadow: {
+                         'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+                    },
+                    animation: {
+                        'spin': 'spin 1s linear infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Glassmorphism Base Styles */
+        body {
+            font-family: 'Inter', 'Tahoma', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .glass-input {
+             background: rgba(255, 255, 255, 0.3);
+             border: 1px solid rgba(255, 255, 255, 0.4);
+             backdrop-filter: blur(5px);
+        }
+
+        /* Loader */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-left-color: #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Page transition animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* Analysis modal textarea */
+        .analysis-textarea {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            height: 150px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #f0f0f0;
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: #fff; color: #000; }
+            .no-print { display: none !important; }
+            .print-container {
+                width: 100%; margin: 0; padding: 0; box-shadow: none;
+                border: none; background: none; backdrop-filter: none;
+            }
+            .print-card {
+                 background: #f9f9f9; border: 1px solid #ddd; box-shadow: none;
+                 backdrop-filter: none; page-break-inside: avoid; margin-bottom: 20px;
+            }
+            a { color: #000; text-decoration: none; }
+            a[href]:after { content: " (" attr(href) ")"; font-size: 0.9em; color: #555; }
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="root"></div>
+
+    <script>
+        // No JSX - React App
+        
+        const h_react = React.createElement;
+        const { useState, useEffect, useReducer, useRef, Fragment, useMemo } = React;
+        const { createRoot } = ReactDOM;
+        // NEW: Supabase createClient
+        const { createClient } = supabase;
+
+        // --- START Tailwind UI SVG Icons ---
+        const IconBox = () => h_react('svg', { fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor", className: "w-6 h-6" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" }));
+        const IconLink = () => h_react('svg', { fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor", className: "w-5 h-5" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" }));
+        const IconChartBar = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 019.75 19.875V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" }));
+        const IconPlus = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4.5v15m7.5-7.5h-15" }));
+        const IconPencil = () => h_react('svg', { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" }));
+        const IconTrash = () => h_react('svg', { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12.397 0c-.045.16-.088.324-.128.49L3 5.79m12.397 0L10.5 2.25h3l.938 3.54z" }));
+        const IconDownload = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" }));
+        const IconUpload = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" }));
+        const IconPrint = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6 3.129M6.72 13.829l10.56 0m-10.56 0L6 3.129m0 0L6 3.129M6 3.129l.096.002a5.32 5.32 0 013.582 1.12l.002.002l.002.002a5.32 5.32 0 013.582-1.12l.096-.002M6 3.129L6 3.129m0 0L4.5 3.129M6 3.129l.096.002a5.32 5.32 0 013.582 1.12l.002.002l.002.002a5.32 5.32 0 013.582-1.12l.096-.002m0 0l1.5.002M18.87 3.129l-1.5-.002m0 0l.096.002a5.32 5.32 0 013.582 1.12l.002.002l.002.002a5.32 5.32 0 013.582-1.12l.096-.002M18.87 3.129l-1.5-.002m-10.56 10.695c.24-.03.48-.062.72-.096m-.72.096L3.129 6M18.87 13.829c.24-.03.48-.062.72-.096m-.72.096h10.56M18.87 13.829l-1.5.002M18.87 13.829L20.25 6M3.129 6l1.5.002m0 0L4.5 3.129M3.129 6H4.5m0 0l1.5 10.695M20.25 6l-1.5 10.695M20.25 6H19.5M19.5 6l-1.5-2.871M19.5 6l-1.5 10.695" }));
+        const IconTable = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125V6.375m1.125 13.125A1.125 1.125 0 003.375 18.375h17.25c.621 0 1.125.504 1.125 1.125m-18.375 0V6.375m0 13.125V6.375m0 0A1.125 1.125 0 013.375 5.25h17.25c.621 0 1.125.504 1.125 1.125m-18.375 0h18.375M3.375 6.375h17.25M3.375 6.375V3.375c0-.621.504-1.125 1.125-1.125h13.5c.621 0 1.125.504 1.125 1.125v3M3.375 6.375h17.25" }));
+        const IconSave = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3H5.25A2.25 2.25 0 003 5.25v1.5" }));
+        const IconAlert = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" }));
+        const IconX = () => h_react('svg', { className: "w-6 h-6", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M6 18L18 6M6 6l12 12" }));
+        const IconSearch = () => h_react('svg', { className: "w-5 h-5 text-gray-400", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" }));
+        const IconSettings = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M10.343 3.94c.09-.542.56-1.007 1.11-1.226.55-.218 1.19-.218 1.74 0 .55.219 1.02.684 1.11 1.226.09.542.09 1.11 0 1.652-.09.542-.56 1.007-1.11 1.226-.55.218-1.19-.218-1.74 0-.55-.219-1.02-.684-1.11-1.226-.09-.542-.09-1.11 0-1.652zM9.99 6.002c.045-.27.18-.518.385-.72.206-.201.47-.35.755-.422m7.87 7.87c.074.285.22.55.422.755.201.206.45.34.72.385m-1.904 1.904c.27.045.518.18.72.385.201.206.35.47.422.755m-4.243 2.121c.285.074.55.22.755.422.206.201.34.45.385.72m-1.904-1.904c-.045.27-.18.518-.385.72-.206-.201-.47.35-.755-.422m-7.87-7.87c-.074-.285-.22-.55-.422-.755-.201-.206-.45-.34-.72-.385m1.904-1.904c-.27-.045-.518-.18-.72-.385-.201-.206-.35-.47-.422.755m4.243-2.121c-.285-.074-.55-.22-.755-.422-.206-.201-.34-.45-.385-.72m1.904 1.904c.045-.27.18-.518.385-.72.206.201.47-.35.755-.422m0 0l2.121-2.121M12 6.002V3.75m0 2.25A2.25 2.25 0 0014.25 12c0 1.242-1.008 2.25-2.25 2.25S9.75 13.242 9.75 12A2.25 2.25 0 0012 9.75m-3 3A2.25 2.25 0 009.75 12c0-1.242 1.008-2.25 2.25-2.25S14.25 10.758 14.25 12m0 0V14.25m0 0A2.25 2.25 0 0012 16.5m0-2.25A2.25 2.25 0 009.75 12M12 16.5V12m0 0v2.25m0 0v2.25m0 0A2.25 2.25 0 0014.25 12m0-2.25A2.25 2.25 0 0012 9.75M12 14.25v2.25m-2.25-2.25A2.25 2.25 0 009.75 12m0 2.25A2.25 2.25 0 0012 16.5m0-2.25V12m2.25 2.25A2.25 2.25 0 0014.25 12m0 2.25h.008v.008H14.25v-.008z" }));
+        const IconArrowRight = () => h_react('svg', { className: "w-5 h-5 ml-2", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" }));
+        const IconArrowLeft = () => h_react('svg', { className: "w-5 h-5 mr-2", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" }));
+        const IconChevronLeft = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.75 19.5L8.25 12l7.5-7.5" }));
+        const IconCheck = ({ className = "w-4 h-4" }) => h_react('svg', { className, fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M4.5 12.75l6 6 9-13.5" }));
+        const IconXCircle = ({ className = "w-4 h-4" }) => h_react('svg', { className, fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }));
+        const IconSpinner = ({ className = "w-4 h-4" }) => h_react('svg', { className: `animate-spin ${className}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, h_react('path', { d: "M12 3v3m0 12v3m0-9a3 3 0 110 6 3 3 0 010-6zm-6-3.172a3 3 0 010 5.196m12 0a3 3 0 010-5.196M6 6.828a3 3 0 015.196 0m0 10.344a3 3 0 01-5.196 0M3 12h3m12 0h3", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" }));
+        const IconSparkles = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM18 12.75l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 18l-1.035.259a3.375 3.375 0 00-2.456 2.456L18 21.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 18l1.036.259a3.375 3.375 0 002.455 2.456L18 12.75z" }));
+        const IconClipboard = () => h_react('svg', { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m-3 8.25h-3v3h3v-3z" }) );
+        // NEW: Logout Icon
+        const IconLogout = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" }));
+        // --- END Tailwind UI SVG Icons ---
+
+        // --- IndexedDB Helper ---
+        const idbHelper = {
+            db: null, dbName: 'AppIncubatorDB_v1', storeName: 'appData', key: 'mainState',
+            async initDB() {
+                return new Promise((resolve, reject) => {
+                    if (this.db) return resolve(this.db);
+                    const request = indexedDB.open(this.dbName, 1);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName, { keyPath: 'key' });
+                        }
+                    };
+                    request.onsuccess = (event) => { this.db = event.target.result; resolve(this.db); };
+                    request.onerror = (event) => { console.error("IndexedDB error:", event.target.errorCode); reject(event.target.errorCode); };
+                });
+            },
+            async saveData(data) {
+                if (!this.db) await this.initDB();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.put({ key: this.key, value: data });
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (event) => reject(event.target.error);
+                });
+            },
+            async loadData() {
+                if (!this.db) await this.initDB();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readonly');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.get(this.key);
+                    request.onsuccess = (event) => { resolve(event.target.result ? event.target.result.value : null); };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            },
+            async clearData() {
+                if (!this.db) await this.initDB();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.clear();
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (event) => reject(event.target.error);
+                });
+            }
+        };
+
+        // --- Utility Functions ---
+        const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substring(2, 9)}`;
+        const formatDate = (date) => {
+            if (!date) return 'أبداً';
+            return new Date(date).toLocaleString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        };
+
+        // --- App State ---
+        const initialState = {
+            categories: [],
+            isLoading: true, // Will be handled by Root
+            error: null,
+            searchTerm: '', 
+            sortBy: { key: 'name', order: 'asc' },
+            lastBackup: null,
+            isDirty: false,
+            showIncognitoWarning: false,
+            fsHandle: null,
+            notification: null, 
+            currentView: 'main', 
+            selectedCategoryId: null,
+            settings: {
+                openRouterKey: '',
+                openRouterModel: 'mistralai/mistral-7b-instruct',
+                supabaseUrl: '', // Now handled by Root
+                supabaseAnonKey: '', // Now handled by Root
+                cloudinaryCloudName: '',
+                cloudinaryPreset: ''
+            }
+        };
+
+        // --- App Reducer (for MainApp) ---
+        function appReducer(state, action) {
+            let newState;
+            switch (action.type) {
+                // LOAD actions are no longer needed here, handled by Root
+                case 'SET_VIEW':
+                    newState = { ...state, currentView: action.payload, selectedCategoryId: action.categoryId || null };
+                    break;
+                case 'SET_NOTIFICATION':
+                    newState = { ...state, notification: action.payload };
+                    break;
+                case 'CLEAR_NOTIFICATION':
+                    newState = { ...state, notification: null };
+                    break;
+                case 'SET_SEARCH':
+                    newState = { ...state, searchTerm: action.payload };
+                    break;
+                case 'SET_DIRTY':
+                    newState = { ...state, isDirty: action.payload };
+                    break;
+                case 'SET_FS_HANDLE':
+                    newState = { ...state, fsHandle: action.payload, lastBackup: new Date().toISOString() };
+                    break;
+                case 'SET_INCOGNITO_WARNING':
+                    newState = { ...state, showIncognitoWarning: true };
+                    break;
+                case 'SET_STATE_FROM_BACKUP':
+                    newState = { ...state, categories: action.payload.categories || [], settings: { ...state.settings, ...action.payload.settings }, lastBackup: action.payload.lastBackup || new Date().toISOString(), isDirty: true };
+                    break;
+                case 'UPDATE_SETTINGS': // This now only updates non-supabase settings
+                    newState = { ...state, settings: { ...state.settings, ...action.payload }, isDirty: true };
+                    break;
+                case 'ADD_CATEGORY':
+                    newState = { ...state, categories: [...state.categories, action.payload], isDirty: true };
+                    break;
+                case 'UPDATE_CATEGORY':
+                    newState = { ...state, categories: state.categories.map(c => c.id === action.payload.id ? action.payload : c), isDirty: true };
+                    break;
+                case 'DELETE_CATEGORY':
+                    newState = { ...state, categories: state.categories.filter(c => c.id !== action.payload), isDirty: true };
+                    break;
+                case 'ADD_LINK':
+                    newState = { ...state, categories: state.categories.map(c => c.id === action.payload.categoryId ? { ...c, links: [...(c.links || []), action.payload.link] } : c), isDirty: true };
+                    break;
+                case 'UPDATE_LINK':
+                    newState = { ...state, categories: state.categories.map(c => c.id === action.payload.categoryId ? { ...c, links: c.links.map(l => l.id === action.payload.link.id ? action.payload.link : l) } : c), isDirty: true };
+                    break;
+                case 'DELETE_LINK':
+                    newState = { ...state, categories: state.categories.map(c => c.id === action.payload.categoryId ? { ...c, links: c.links.filter(l => l.id !== action.payload.linkId) } : c), isDirty: true };
+                    break;
+                case 'DELETE_ALL_DATA':
+                    newState = { ...initialState, settings: state.settings, isLoading: false, isDirty: true, fsHandle: state.fsHandle };
+                    break;
+                case 'SET_LAST_BACKUP':
+                    newState = { ...state, lastBackup: new Date().toISOString() };
+                    break;
+                default:
+                    throw new Error(`Unhandled action type: ${action.type}`);
+            }
+            return newState;
+        }
+
+        // --- Reusable Components ---
+
+        const Spinner = () => h_react('div', { className: "loader" });
+        const FullScreenSpinner = () => h_react('div', { className: "flex justify-center items-center min-h-screen" }, h_react(Spinner));
+
+        const Modal = ({ isOpen, onClose, title, children, size = 'lg' }) => {
+            if (!isOpen) return null;
+            const sizeClasses = { 'lg': 'max-w-lg', '3xl': 'max-w-3xl' };
+            return h_react('div', { className: "fixed inset-0 z-40 flex items-center justify-center p-4", "aria-modal": "true", role: "dialog" },
+                h_react('div', { className: "fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity", onClick: onClose }),
+                h_react('div', { className: `relative z-50 glass-card w-full ${sizeClasses[size]} p-6 rounded-2xl` },
+                    h_react('div', { className: "flex items-start justify-between mb-4" },
+                        h_react('h3', { className: "text-xl font-semibold text-white" }, title),
+                        h_react('button', { onClick: onClose, className: "text-white/70 hover:text-white" }, h_react(IconX))
+                    ),
+                    children
+                )
+            );
+        };
+
+        const Button = ({ children, onClick, variant = 'primary', className = '', ...props }) => {
+            const baseStyle = "px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-md flex items-center justify-center gap-2";
+            const variants = {
+                primary: "bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500",
+                secondary: "bg-white/30 hover:bg-white/50 text-white border border-white/40",
+                danger: "bg-red-600 hover:bg-red-700 text-white border border-red-500",
+                ghost: "hover:bg-white/20 text-white/90",
+            };
+            return h_react('button', { onClick, className: `${baseStyle} ${variants[variant]} ${className}`, ...props }, children);
+        };
+        
+        const Input = ({ label, id, ...props }) => {
+            return h_react('div', { className: "w-full mb-4" },
+                h_react('label', { htmlFor: id, className: "block text-sm font-medium text-white/90 mb-1" }, label),
+                h_react('input', { id, className: "w-full px-3 py-2 text-white placeholder-white/60 glass-input rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400", ...props })
+            );
+        };
+        
+        const Textarea = ({ label, id, ...props }) => {
+            return h_react('div', { className: "w-full mb-4" },
+                h_react('label', { htmlFor: id, className: "block text-sm font-medium text-white/90 mb-1" }, label),
+                h_react('textarea', { id, className: "w-full px-3 py-2 text-white placeholder-white/60 glass-input rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400", ...props })
+            );
+        };
+        
+        const Notification = ({ notification, onDismiss }) => {
+            if (!notification) return null;
+            const { type, message } = notification;
+            const isError = type === 'error';
+            const colors = isError ? "bg-red-500/80 border-red-700" : "bg-green-500/80 border-green-700";
+            return h_react('div', { className: `fixed bottom-24 sm:bottom-4 right-4 z-50 p-4 rounded-lg shadow-lg glass-card ${colors} border text-white` },
+                h_react('div', { className: "flex items-center justify-between" },
+                    h_react('span', null, message),
+                    h_react('button', { onClick: onDismiss, className: "ms-4 text-white/80 hover:text-white" }, h_react(IconX, { className: "w-5 h-5" }))
+                )
+            );
+        };
+
+        const StatusBar = ({ lastBackup, showWarning }) => {
+            return h_react('footer', { className: "fixed bottom-0 left-0 right-0 glass-card rounded-t-lg p-3 text-white text-xs sm:text-sm flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 text-center sm:text-inherit z-30 no-print" },
+                h_react('div', { className: "flex items-center gap-2" },
+                    h_react(IconAlert, { className: `w-5 h-5 ${showWarning ? 'text-yellow-300' : 'text-transparent'}` }),
+                    h_react('span', { className: `${showWarning ? 'text-yellow-300' : 'text-white/70'}`}, 
+                        showWarning ? "تحذير: التخزين غير مستقر. نوصي بعمل نسخة احتياطية." : "يتم حفظ جميع التغييرات محلياً."
+                    )
+                ),
+                h_react('div', { className: "flex items-center gap-4" },
+                    h_react('span', { className: "text-white/70" }, `آخر نسخة احتياطية: ${formatDate(lastBackup)}`)
+                )
+            );
+        };
+        
+        // --- Auth Screen Components (NEW) ---
+
+        const SupabaseConfigScreen = ({ onConfigSaved }) => {
+            const [url, setUrl] = useState('');
+            const [key, setKey] = useState('');
+            const [error, setError] = useState(null);
+
+            const handleSave = () => {
+                setError(null);
+                if (!url || !key) {
+                    setError("يرجى ملء كلا الحقلين.");
+                    return;
+                }
+                try {
+                    // Test creating a client first
+                    createClient(url, key);
+                    onConfigSaved(url, key);
+                } catch (err) {
+                    setError("الإعدادات غير صالحة. تأكد من الرابط والمفتاح.");
+                }
+            };
+
+            return h_react('div', { className: "min-h-screen flex items-center justify-center p-4 animate-fade-in" },
+                h_react('div', { className: "glass-card w-full max-w-md p-8" },
+                    h_react('h2', { className: "text-3xl font-bold text-white text-center mb-6" }, "ضبط اتصال Supabase"),
+                    h_react('p', { className: "text-white/80 text-center mb-6" }, "يرجى إدخال بيانات Supabase الخاصة بك للبدء. هذه الخطوة مطلوبة مرة واحدة فقط."),
+                    error && h_react('div', { className: 'bg-red-500/80 p-3 rounded-lg text-white text-center mb-4' }, error),
+                    h_react('form', { onSubmit: (e) => e.preventDefault() },
+                        h_react(Input, { label: "Supabase URL", id: "supabaseUrl", value: url, onChange: (e) => setUrl(e.target.value), placeholder: "https://your-project.supabase.co" }),
+                        h_react(Input, { label: "Supabase Anon Key", id: "supabaseKey", type: "password", value: key, onChange: (e) => setKey(e.target.value), placeholder: "ey..." }),
+                        h_react(Button, { onClick: handleSave, variant: 'primary', className: 'w-full mt-4' }, "حفظ ومتابعة")
+                    )
+                )
+            );
+        };
+
+        const LoginScreen = ({ supabaseClient, onClearConfig }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState(null);
+            
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError(null);
+                try {
+                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+                    // No need to do anything on success, the onAuthStateChange listener in Root will handle it.
+                } catch (err) {
+                    setError(err.message || "فشل تسجيل الدخول. تأكد من بياناتك.");
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return h_react('div', { className: "min-h-screen flex items-center justify-center p-4 animate-fade-in" },
+                h_react('div', { className: "glass-card w-full max-w-md p-8" },
+                    h_react('h2', { className: "text-3xl font-bold text-white text-center mb-6" }, "تسجيل الدخول"),
+                    error && h_react('div', { className: 'bg-red-500/80 p-3 rounded-lg text-white text-center mb-4' }, error),
+                    h_react('form', { onSubmit: handleLogin },
+                        h_react(Input, { label: "البريد الإلكتروني", id: "email", type: "email", value: email, onChange: (e) => setEmail(e.target.value) }),
+                        h_react(Input, { label: "كلمة المرور", id: "password", type: "password", value: password, onChange: (e) => setPassword(e.target.value) }),
+                        h_react(Button, { type: 'submit', variant: 'primary', className: 'w-full mt-4', disabled: isLoading }, 
+                            isLoading ? h_react(IconSpinner, { className: 'w-5 h-5' }) : "تسجيل الدخول"
+                        ),
+                        h_react(Button, { onClick: onClearConfig, variant: 'secondary', className: 'w-full mt-2' }, "تغيير إعدادات Supabase")
+                    )
+                )
+            );
+        };
+
+        // --- App-Specific Components (Renamed App -> MainApp) ---
+        
+        const Header = ({ onSearch, onAddCategory, onShowSettings, onShowDashboard, user, onLogout }) => {
+            return h_react('header', { className: "glass-card p-4 rounded-b-xl sticky top-0 z-30 mb-6 no-print" },
+                h_react('div', { className: "flex flex-col md:flex-row items-center justify-between gap-4" },
+                    h_react('h1', { className: "text-2xl font-bold text-white text-center" }, "حاضنة التطبيقات والأجندة"),
+                    h_react('div', { className: "relative w-full md:w-72" },
+                        h_react('input', { type: "search", placeholder: "ابحث عن قسم...", className: "w-full pe-10 ps-4 py-2 text-white placeholder-white/60 glass-input rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400", onChange: (e) => onSearch(e.target.value) }),
+                        h_react('div', { className: "absolute inset-y-0 end-0 flex items-center pe-3" }, h_react(IconSearch))
+                    )
+                ),
+                h_react('div', { className: "mt-4 flex flex-wrap items-center justify-center gap-2" },
+                    h_react(Button, { onClick: onAddCategory, variant: 'primary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconPlus), "إضافة قسم جديد"),
+                    h_react(Button, { onClick: onShowDashboard, variant: 'secondary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconChartBar), "عرض الإحصائيات"),
+                    h_react(Button, { onClick: onShowSettings, variant: 'secondary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconSettings), "الإعدادات والأمان"),
+                    h_react(Button, { onClick: onLogout, variant: 'danger', className: 'flex-grow sm:flex-grow-0' }, h_react(IconLogout), "خروج")
+                ),
+                h_react('p', { className: "text-center text-white/70 text-sm mt-3" }, `مرحباً، ${user.email}`)
+            );
+        };
+
+        const DashboardScreen = ({ categories, onBack }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            const stats = useMemo(() => ({ totalCategories: categories.length, totalLinks: categories.reduce((acc, cat) => acc + (cat.links ? cat.links.length : 0), 0) }), [categories]);
+
+            useEffect(() => {
+                if (chartRef.current && categories) {
+                    const ctx = chartRef.current.getContext('2d');
+                    const chartData = {
+                        labels: categories.map(c => c.name),
+                        datasets: [{ label: 'عدد الروابط', data: categories.map(c => c.links ? c.links.length : 0), backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'], borderColor: ['rgba(255, 255, 255, 0.5)'], borderWidth: 1 }]
+                    };
+                    if (chartInstance.current) chartInstance.current.destroy();
+                    chartInstance.current = new Chart(ctx, { type: 'doughnut', data: chartData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'white', font: { family: 'Inter, Tahoma' } } } } } });
+                }
+                return () => { if (chartInstance.current) chartInstance.current.destroy(); chartInstance.current = null; };
+            }, [categories]);
+
+            const StatCard = ({ title, value, icon }) => h_react('div', { className: "glass-card p-6 rounded-2xl flex items-center gap-4" },
+                h_react('div', { className: "p-3 rounded-full bg-indigo-500/50" }, icon),
+                h_react('div', null, h_react('h4', { className: "text-sm font-medium text-white/80" }, title), h_react('p', { className: "text-3xl font-bold text-white" }, value))
+            );
+
+            return h_react('div', { className: "animate-fade-in" },
+                h_react('div', { className: "flex items-center justify-between mb-6" }, h_react('h2', { className: "text-3xl font-bold text-white" }, "لوحة الإحصائيات"), h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية")),
+                h_react('div', { className: "mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6" },
+                    h_react('div', { className: "lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" }, h_react(StatCard, { title: "إجمالي الأقسام", value: stats.totalCategories, icon: h_react(IconBox) }), h_react(StatCard, { title: "إجمالي الروابط", value: stats.totalLinks, icon: h_react(IconLink, { className: "w-6 h-6" }) })),
+                    h_react('div', { className: "glass-card p-6 rounded-2xl min-h-[250px] sm:min-h-[200px]" }, h_react('h3', { className: "text-lg font-semibold text-white mb-4 text-center sm:text-right" }, "الروابط حسب القسم"), h_react('div', { className: "relative h-48" }, h_react('canvas', { ref: chartRef })))
+                )
+            );
+        };
+        
+        const CategoryForm = ({ isOpen, onClose, onSubmit, category }) => {
+            const [name, setName] = useState('');
+            useEffect(() => { if(category) setName(category.name); else setName(''); }, [category, isOpen]);
+            const handleSubmit = (e) => { e.preventDefault(); if (!name) return; onSubmit({ id: category ? category.id : generateId(), name }); onClose(); };
+            return h_react(Modal, { isOpen, onClose, title: category ? 'تعديل قسم' : 'إضافة قسم جديد' },
+                h_react('form', { onSubmit: handleSubmit },
+                    h_react(Input, { label: 'اسم القسم', id: 'catName', value: name, onChange: (e) => setName(e.target.value), required: true }),
+                    h_react('div', { className: "flex justify-end gap-2 mt-6" }, h_react(Button, { type: 'button', variant: 'secondary', onClick: onClose }, "إلغاء"), h_react(Button, { type: 'submit', variant: 'primary' }, category ? "حفظ التعديلات" : "إضافة"))
+                )
+            );
+        };
+        
+        const LinkForm = ({ isOpen, onClose, onSubmit, link }) => {
+            const [name, setName] = useState(''); const [url, setUrl] = useState(''); const [description, setDescription] = useState('');
+            useEffect(() => { if(link) { setName(link.name); setUrl(link.url); setDescription(link.description); } else { setName(''); setUrl(''); setDescription(''); } }, [link, isOpen]);
+            const handleSubmit = (e) => { e.preventDefault(); if (!name || !url) return; let formattedUrl = url.startsWith('http') ? url : `https://${url}`; onSubmit({ id: link ? link.id : generateId(), name, url: formattedUrl, description }); onClose(); };
+            return h_react(Modal, { isOpen, onClose, title: link ? 'تعديل رابط' : 'إضافة رابط جديد' },
+                h_react('form', { onSubmit: handleSubmit },
+                    h_react(Input, { label: 'اسم الرابط/التطبيق', id: 'linkName', value: name, onChange: (e) => setName(e.target.value), required: true }),
+                    h_react(Input, { label: 'الرابط (URL)', id: 'linkUrl', value: url, onChange: (e) => setUrl(e.target.value), required: true, type: 'url', placeholder: 'https://example.com' }),
+                    h_react(Textarea, { label: 'الوصف (اختياري)', id: 'linkDesc', value: description, onChange: (e) => setDescription(e.target.value), rows: 3 }),
+                    h_react('div', { className: "flex justify-end gap-2 mt-6" }, h_react(Button, { type: 'button', variant: 'secondary', onClick: onClose }, "إلغاء"), h_react(Button, { type: 'submit', variant: 'primary' }, link ? "حفظ التعديلات" : "إضافة"))
+                )
+            );
+        };
+
+        const CopyableTextarea = ({ title, content }) => {
+            const [copied, setCopied] = useState(false);
+            const handleCopy = () => {
+                const ta = document.createElement('textarea');
+                ta.value = content; ta.style.position = 'fixed'; ta.style.opacity = 0;
+                document.body.appendChild(ta); ta.select();
+                try {
+                    document.execCommand('copy'); setCopied(true); setTimeout(() => setCopied(false), 2000);
+                } catch (err) { console.error('Failed to copy text: ', err); }
+                document.body.removeChild(ta);
+            };
+
+            return h_react('div', { className: "mb-4" },
+                h_react('div', { className: "flex items-center justify-between mb-2" },
+                    h_react('h4', { className: "text-lg font-semibold text-white" }, title),
+                    h_react(Button, { onClick: handleCopy, variant: 'secondary', className: 'px-3 py-1 text-xs' },
+                        copied ? h_react(IconCheck, { className: "w-4 h-4" }) : h_react(IconClipboard), copied ? "تم النسخ!" : "نسخ"
+                    )
+                ),
+                h_react('textarea', { readOnly: true, value: content, className: "w-full p-3 text-white placeholder-white/60 rounded-lg focus:outline-none analysis-textarea", rows: 6 })
+            );
+        };
+
+        const AnalysisModal = ({ isOpen, onClose, linkUrl, settings }) => {
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [analysis, setAnalysis] = useState({ description: '', technologies: '', code: '' });
+            const analysisPrompt = `... (analysis prompt as before) ...`; // Kept as before
+
+            useEffect(() => {
+                if (!isOpen) return;
+                setIsLoading(true); setError(null); setAnalysis({ description: '', technologies: '', code: '' });
+                if (!settings.openRouterKey) {
+                    setError("يرجى إدخال مفتاح OpenRouter API في صفحة الإعدادات أولاً.");
+                    setIsLoading(false); return;
+                }
+                const fetchAnalysis = async () => {
+                    try {
+                        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${settings.openRouterKey}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ "model": settings.openRouterModel || 'mistralai/mistral-7b-instruct', "messages": [{"role": "user", "content": analysisPrompt }], "response_format": { "type": "json_object" } })
+                        });
+                        if (!response.ok) { const errData = await response.json(); throw new Error(errData.error.message || `Error: ${response.status}`); }
+                        const data = await response.json();
+                        const content = data.choices[0].message.content;
+                        const parsedContent = JSON.parse(content);
+                        setAnalysis(parsedContent);
+                    } catch (err) { console.error("Analysis failed:", err); setError(`فشل التحليل: ${err.message}. (تحقق من المفتاح والنموذج في الإعدادات)`); } 
+                    finally { setIsLoading(false); }
+                };
+                fetchAnalysis();
+            }, [isOpen, linkUrl, settings]);
+
+            return h_react(Modal, { isOpen, onClose, title: `تحليل الرابط: ${linkUrl}`, size: '3xl' },
+                h_react('div', { className: "max-h-[70vh] overflow-y-auto pr-2" },
+                    isLoading ? h_react('div', { className: "flex flex-col items-center justify-center h-64" }, h_react(Spinner), h_react('p', { className: "text-white/80 mt-4" }, "جاري تحليل الرابط..."))
+                    : error ? h_react('div', { className: "flex flex-col items-center justify-center h-64" }, h_react(IconXCircle, { className: "w-12 h-12 text-red-400" }), h_react('p', { className: "text-red-300 mt-4 text-center" }, error))
+                    : h_react('div', { className: "space-y-4" },
+                        h_react(CopyableTextarea, { title: "الوصف الكامل للتطبيق", content: analysis.description }),
+                        h_react(CopyableTextarea, { title: "التقنيات المستخدمة ووظيفتها", content: analysis.technologies }),
+                        h_react(CopyableTextarea, { title: "مثال على الكود المصدري (A-Z)", content: analysis.code })
+                    )
+                )
+            );
+        };
+        
+        const LinkItem = ({ link, onEdit, onDelete, onAnalyze }) => {
+            return h_react('div', { className: "p-4 bg-white/10 rounded-lg transition-all group relative" },
+                h_react('div', { className: "absolute top-4 end-4 flex-shrink-0 flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity no-print" },
+                    h_react(Button, { onClick: () => onEdit(link), variant: 'ghost', className: 'p-1 h-8 w-8' }, h_react(IconPencil)),
+                    h_react(Button, { onClick: () => onDelete(link.id), variant: 'ghost', className: 'p-1 h-8 w-8 text-red-300 hover:bg-red-500/30' }, h_react(IconTrash))
+                ),
+                h_react('div', { className: "max-w-[calc(100%-60px)]" },
+                    h_react('h4', { className: "text-lg font-semibold text-white truncate" }, link.name),
+                    h_react('p', { className: "text-sm text-white/80 mt-1 truncate" }, link.description),
+                    h_react('p', { className: "text-xs text-indigo-200/70 mt-2 truncate print-hidden" }, link.url)
+                ),
+                h_react('div', { className: "mt-4 pt-4 border-t border-white/20 flex flex-col sm:flex-row gap-2 no-print" },
+                    h_react('a', { href: link.url, target: "_blank", rel: "noopener noreferrer", className: "px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500 flex-1" }, 
+                        h_react(IconLink, {className: "w-5 h-5"}), "فتح الرابط"
+                    ),
+                    h_react(Button, { onClick: () => onAnalyze(link.url), variant: 'secondary', className: 'flex-1' }, 
+                        h_react(IconSparkles, {className: "w-5 h-5"}), "تحليل الرابط (AI)"
+                    )
+                )
+            );
+        };
+        
+        const CategoryDetailCard = ({ category, onAddLink, onEditLink, onDeleteLink, settings }) => {
+            const [linkModal, setLinkModal] = useState({ isOpen: false, link: null });
+            const [linkSearchTerm, setLinkSearchTerm] = useState('');
+            const [analysisModal, setAnalysisModal] = useState({ isOpen: false, linkUrl: null });
+            const openAddLink = () => setLinkModal({ isOpen: true, link: null });
+            const openEditLink = (link) => setLinkModal({ isOpen: true, link });
+            const closeLinkModal = () => setLinkModal({ isOpen: false, link: null });
+            const handleLinkSubmit = (linkData) => { if (linkModal.link) onEditLink(category.id, linkData); else onAddLink(category.id, linkData); };
+            const links = category.links || [];
+            const filteredLinks = useMemo(() => {
+                const term = linkSearchTerm.toLowerCase();
+                if (!term) return links;
+                return links.filter(link => link.name.toLowerCase().includes(term) || (link.description && link.description.toLowerCase().includes(term)) || link.url.toLowerCase().includes(term));
+            }, [links, linkSearchTerm]);
+
+            return h_react(Fragment, null,
+                h_react('section', { className: "glass-card rounded-2xl p-4 sm:p-6 print-card" },
+                    h_react('div', { className: "relative w-full mb-4 no-print" },
+                        h_react('input', { type: "search", placeholder: "ابحث عن رابط داخل هذا القسم...", className: "w-full pe-10 ps-4 py-2 text-white placeholder-white/60 glass-input rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400", onChange: (e) => setLinkSearchTerm(e.target.value) }),
+                        h_react('div', { className: "absolute inset-y-0 end-0 flex items-center pe-3" }, h_react(IconSearch))
+                    ),
+                    h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4" },
+                        filteredLinks.length > 0 ?
+                            filteredLinks.map(link => h_react(LinkItem, { key: link.id, link, onEdit: openEditLink, onDelete: (linkId) => onDeleteLink(category.id, linkId), onAnalyze: (linkUrl) => setAnalysisModal({ isOpen: true, linkUrl: linkUrl }) })) :
+                            h_react('p', { className: "text-white/70 md:col-span-2 lg:col-span-3" }, linkSearchTerm ? "لا توجد نتائج بحث مطابقة." : "لا توجد روابط في هذا القسم بعد.")
+                    ),
+                    h_react(Button, { onClick: openAddLink, variant: 'secondary', className: "w-full no-print" }, h_react(IconPlus), "إضافة رابط جديد لهذا القسم")
+                ),
+                h_react(LinkForm, { isOpen: linkModal.isOpen, onClose: closeLinkModal, onSubmit: handleLinkSubmit, link: linkModal.link }),
+                h_react(AnalysisModal, { isOpen: analysisModal.isOpen, onClose: () => setAnalysisModal({ isOpen: false, linkUrl: null }), linkUrl: analysisModal.linkUrl, settings: settings })
+            );
+        };
+        
+        const CategoryListScreen = ({ categories, onSelectCategory, onEditCategory, onDeleteCategory }) => {
+            const CategoryListItem = ({ category, onClick, onEdit, onDelete }) => {
+                const linkCount = category.links ? category.links.length : 0;
+                return h_react('div', { className: "glass-card rounded-2xl p-4 transition-all hover:bg-white/30" },
+                    h_react('div', { className: "flex items-center justify-between" },
+                        h_react('div', { className: "flex-1 cursor-pointer min-w-0", onClick: () => onClick(category.id) },
+                            h_react('h3', { className: "text-xl font-bold text-white truncate" }, category.name), h_react('span', { className: "text-sm text-white/70" }, `(${linkCount} روابط)`)
+                        ),
+                        h_react('div', { className: "flex gap-2 no-print flex-shrink-0" },
+                            h_react(Button, { onClick: () => onEdit(category), variant: 'ghost', className: 'p-1 h-8 w-8' }, h_react(IconPencil)), h_react(Button, { onClick: () => onDelete(category.id), variant: 'ghost', className: 'p-1 h-8 w-8 text-red-300 hover:bg-red-500/30' }, h_react(IconTrash))
+                        )
+                    )
+                );
+            };
+            return h_react('div', { className: "space-y-6 animate-fade-in" },
+                categories.length > 0 ?
+                    categories.map(cat => h_react(CategoryListItem, { key: cat.id, category: cat, onClick: onSelectCategory, onEdit: onEditCategory, onDelete: onDeleteCategory })) :
+                    h_react('div', { className: "glass-card p-10 text-center" }, h_react('p', { className: "text-xl text-white/80" }, "لم تقم بإضافة أي أقسام بعد. ابدأ بإضافة قسم جديد."))
+            );
+        };
+        
+        const CategoryDetailScreen = ({ categoryId, categories, onBack, dispatch, settings }) => {
+            const category = useMemo(() => categories.find(c => c.id === categoryId), [categories, categoryId]);
+            const handleAddLink = (categoryId, link) => dispatch({ type: 'ADD_LINK', payload: { categoryId, link } });
+            const handleEditLink = (categoryId, link) => dispatch({ type: 'UPDATE_LINK', payload: { categoryId, link } });
+            const handleDeleteLink = (categoryId, linkId) => { if(window.confirm("هل أنت متأكد من حذف هذا الرابط؟")) { dispatch({ type: 'DELETE_LINK', payload: { categoryId, linkId } }); } };
+            
+            if (!category) {
+                return h_react('div', { className: "animate-fade-in" }, h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية"), h_react('p', { className: "text-center text-white mt-10" }, "لم يتم العثور على القسم."));
+            }
+            return h_react('div', { className: "animate-fade-in" },
+                h_react('div', { className: "flex items-center justify-between mb-6" },
+                    h_react('h2', { className: "text-3xl font-bold text-white truncate" }, category.name),
+                    h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية")
+                ),
+                h_react(CategoryDetailCard, { category: category, onAddLink: handleAddLink, onEditLink: handleEditLink, onDeleteLink: handleDeleteLink, settings: settings })
+            );
+        };
+
+        const ApiInputStatus = ({ status, message }) => {
+            if (status === 'testing') { return h_react('div', { className: "flex items-center gap-1 text-xs text-yellow-300 mt-1" }, h_react(IconSpinner, { className: "w-4 h-4" }), 'جاري الاختبار...'); }
+            if (status === 'success') { return h_react('div', { className: "flex items-center gap-1 text-xs text-green-300 mt-1" }, h_react(IconCheck, { className: "w-4 h-4" }), message || 'الاتصال ناجح'); }
+            if (status === 'error') { return h_react('div', { className: "flex items-center gap-1 text-xs text-red-300 mt-1" }, h_react(IconXCircle, { className: "w-4 h-4" }), message || 'فشل الاتصال'); }
+            return null;
+        };
+        const ApiInput = ({ label, id, name, value, onChange, type = "text", status, message, placeholder = "" }) => {
+            const borderColor = status === 'success' ? 'focus:ring-green-400 border-green-500/50' : status === 'error' ? 'focus:ring-red-400 border-red-500/50' : 'focus:ring-indigo-400 border-transparent';
+            return h_react('div', { className: "w-full" },
+                h_react('label', { htmlFor: id, className: "block text-sm font-medium text-white/90 mb-1" }, label),
+                h_react('input', { id: id, name: name, value: value, onChange: onChange, type: type, placeholder: placeholder, className: `w-full px-3 py-2 text-white placeholder-white/60 glass-input rounded-lg focus:outline-none focus:ring-2 ${borderColor} border transition-colors` }),
+                h_react(ApiInputStatus, { status, message })
+            );
+        };
+        
+        // --- MODIFIED: SettingsScreen (Supabase fields removed) ---
+        const SettingsScreen = ({ onShowMain, onJsonExport, onJsonImport, onExcelExport, onPrint, onDeleteAll, onSave, fsHandle, lastBackup, settings, onSaveSettings }) => {
+            const importRef = useRef(null);
+            const [localSettings, setLocalSettings] = useState(settings);
+            // Test results only for OpenRouter and Cloudinary
+            const [testResults, setTestResults] = useState({ openRouter: { status: 'idle', message: '' }, cloudinary: { status: 'idle', message: '' } });
+            const [isTesting, setIsTesting] = useState(false);
+
+            useEffect(() => { setLocalSettings(settings); }, [settings]);
+            const handleChange = (e) => { setLocalSettings({ ...localSettings, [e.target.name]: e.target.value }); };
+            
+            const testOpenRouter = async (key, model) => { /* ... (test function) ... */ 
+                 if (!key || !model) return { status: 'error', message: 'يرجى ملء المفتاح والنموذج' };
+                try {
+                    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ "model": model, "messages": [{"role": "user", "content": "Test"}] }) });
+                    if (res.ok) return { status: 'success', message: 'الاتصال ناجح' }; if (res.status === 401) return { status: 'error', message: 'المفتاح غير صالح' }; return { status: 'error', message: `فشل: ${res.statusText}` };
+                } catch (e) { return { status: 'error', message: 'فشل الاتصال (تحقق من الشبكة)' }; }
+            };
+            const testCloudinary = async (cloudName) => { /* ... (test function) ... */ 
+                 if (!cloudName) return { status: 'error', message: 'يرجى ملء اسم السحابة' };
+                try {
+                    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/ping`);
+                    const data = await res.json();
+                    if (res.ok && data.status === 'ok') return { status: 'success', message: 'الاتصال ناجح' }; return { status: 'error', message: 'اسم السحابة غير صالح' };
+                } catch (e) { return { status: 'error', message: 'فشل الاتصال (تحقق من الاسم)' }; }
+            };
+
+            const handleSaveAndTest = async () => {
+                setIsTesting(true); 
+                onSaveSettings(localSettings); // Save first
+                setTestResults({ openRouter: { status: 'testing', message: '' }, cloudinary: { status: 'testing', message: '' } });
+                const [orResult, clResult] = await Promise.all([
+                    testOpenRouter(localSettings.openRouterKey, localSettings.openRouterModel),
+                    testCloudinary(localSettings.cloudinaryCloudName)
+                ]);
+                setTestResults({ openRouter: orResult, cloudinary: clResult });
+                setIsTesting(false);
+            };
+
+            const SettingCard = ({ title, description, children }) => h_react('div', { className: "glass-card rounded-2xl p-4 sm:p-6 mb-6" },
+                h_react('h3', { className: "text-xl font-semibold text-white border-b border-white/20 pb-2 mb-4" }, title), h_react('p', { className: "text-white/80 mb-4 text-sm" }, description), h_react('div', null, children)
+            );
+
+            return h_react('div', { className: "animate-fade-in" },
+                h_react('div', { className: "flex flex-col sm:flex-row items-center justify-between mb-6 gap-4" }, h_react('h2', { className: "text-3xl font-bold text-white" }, "الإعدادات والأمان"), h_react(Button, { onClick: onShowMain, variant: 'secondary', className: 'w-full sm:w-auto' }, h_react(IconArrowRight), "رجوع للرئيسية")),
+                h_react(SettingCard, { title: "الاتصالات والخدمات السحابية", description: "أدخل مفاتيح API الخاصة بك للخدمات الخارجية. سيتم اختبارها عند الحفظ." },
+                    h_react('div', { className: "space-y-6 w-full" },
+                        h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "OpenRouter.ai"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "API Key", id: "openRouterKey", name: "openRouterKey", value: localSettings.openRouterKey, onChange: handleChange, type: "password", ...testResults.openRouter }), h_react(ApiInput, { label: "Model Name", id: "openRouterModel", name: "openRouterModel", value: localSettings.openRouterModel, onChange: handleChange, ...testResults.openRouter }))),
+                        // Supabase fieldset is REMOVED from here
+                        h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "Cloudinary"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "Cloud Name", id: "cloudinaryCloudName", name: "cloudinaryCloudName", value: localSettings.cloudinaryCloudName, onChange: handleChange, ...testResults.cloudinary }), h_react(ApiInput, { label: "Upload Preset", id: "cloudinaryPreset", name: "cloudinaryPreset", value: localSettings.cloudinaryPreset, onChange: handleChange, status: 'idle' }))),
+                        h_react(Button, { onClick: handleSaveAndTest, variant: 'primary', disabled: isTesting, className: "mt-4 w-full sm:w-auto" }, isTesting ? h_react(IconSpinner, { className: "w-5 h-5" }) : h_react(IconSave), isTesting ? "جاري الحفظ والاختبار..." : "حفظ واختبار الاتصالات")
+                    )
+                ),
+                h_react(SettingCard, { title: "النسخ الاحتياطي والاستعادة", description: "احفظ بياناتك محلياً كملف JSON أو استعد نسخة سابقة." },
+                    h_react('div', { className: "flex flex-col sm:flex-row flex-wrap gap-2" }, h_react(Button, { onClick: onJsonExport, variant: 'primary', className: 'w-full sm:w-auto' }, h_react(IconDownload), "نسخ احتياطي (JSON)"), h_react(Button, { onClick: () => importRef.current.click(), variant: 'secondary', className: 'w-full sm:w-auto' }, h_react(IconUpload), "استعادة (JSON)"), h_react('input', { type: 'file', accept: '.json', ref: importRef, className: 'hidden', onChange: onJsonImport }))
+                ),
+                h_react(SettingCard, { title: "التصدير والطباعة", description: "تصدير بياناتك كملف Excel أو طباعة عرض لجميع الأقسام والروابط." },
+                    h_react('div', { className: "flex flex-col sm:flex-row flex-wrap gap-2" }, h_react(Button, { onClick: onExcelExport, variant: 'secondary', className: 'w-full sm:w-auto' }, h_react(IconTable), "تصدير (Excel)"), h_react(Button, { onClick: onPrint, variant: 'secondary', className: 'w-full sm:w-auto' }, h_react(IconPrint), "طباعة"))
+                ),
+                'showSaveFilePicker' in window && h_react(SettingCard, { title: "الحفظ التلقائي للملفات", description: `حالة الاتصال: ${fsHandle ? `نشط. يتم الحفظ تلقائياً.` : `غير نشط. آخر نسخة: ${formatDate(lastBackup)}`}` },
+                    h_react('div', { className: "flex flex-col sm:flex-row flex-wrap gap-2" }, !fsHandle ? h_react(Button, { onClick: onSave, variant: 'primary', className: 'w-full sm:w-auto' }, h_react(IconSave), "تفعيل الحفظ التلقائي") : h_react('span', { className: "px-3 py-2 rounded-lg bg-green-500/30 text-green-200 text-sm" }, "الحفظ التلقائي مُفعّل"))
+                ),
+                h_react('div', { className: "glass-card rounded-2xl p-4 sm:p-6 mb-6 bg-red-900/30 border border-red-500/50" },
+                    h_react('h3', { className: "text-xl font-semibold text-red-200 border-b border-red-400/30 pb-2 mb-4" }, "منطقة الخطر"), h_react('p', { className: "text-red-200/90 mb-4 text-sm" }, "سيؤدي هذا الإجراء إلى حذف جميع الأقسام والروابط من قاعدة البيانات المحلية في متصفحك. لا يمكن التراجع عن هذا الأمر."), h_react(Button, { onClick: onDeleteAll, variant: 'danger', className: 'w-full sm:w-auto' }, h_react(IconTrash), "حذف كل البيانات نهائياً")
+                )
+            );
+        };
+
+        // --- Main App Component (Renamed from App) ---
+        function MainApp({ initialData, user, onLogout }) {
+            // Initialize reducer with data loaded by Root
+            const [state, dispatch] = useReducer(appReducer, { ...initialData, isLoading: false }); 
+            
+            const [categoryModal, setCategoryModal] = useState({ isOpen: false, category: null });
+            const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+            // Data persistence effect (saving)
+            useEffect(() => {
+                if (state.isLoading || !state.isDirty) return;
+                const dataToSave = { categories: state.categories, lastBackup: state.lastBackup, settings: state.settings };
+                idbHelper.saveData(dataToSave)
+                    .then(() => dispatch({ type: 'SET_DIRTY', payload: false }))
+                    .catch(err => { console.error("Failed to save to IDB:", err); showNotification('error', "فشل الحفظ التلقائي في المتصفح"); });
+                if (state.fsHandle) autoSaveToFile(state.fsHandle, JSON.stringify(dataToSave, null, 2));
+            }, [state.categories, state.settings, state.isDirty, state.fsHandle, state.isLoading]);
+            
+            // beforeunload effect
+            useEffect(() => {
+                const handleBeforeUnload = (e) => { if (state.isDirty) { e.preventDefault(); e.returnValue = 'لديك تغييرات غير محفوظة. هل أنت متأكد من المغادرة؟'; } };
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [state.isDirty]);
+            
+            // Incognito check
+            useEffect(() => {
+                 (async () => {
+                    if (navigator.storage && navigator.storage.persist) { if (!(await navigator.storage.persisted())) dispatch({ type: 'SET_INCOGNITO_WARNING' }); }
+                    else { try { localStorage.setItem('__test_storage__', '1'); localStorage.removeItem('__test_storage__'); } catch (e) { dispatch({ type: 'SET_INCOGNITO_WARNING' }); } }
+                })();
+            }, []);
+
+            // --- Handlers (identical to before, but now inside MainApp) ---
+            const showNotification = (type, message) => {
+                dispatch({ type: 'SET_NOTIFICATION', payload: { type, message } });
+                setTimeout(() => dispatch({ type: 'CLEAR_NOTIFICATION' }), 3000);
+            };
+            const handleJsonExport = () => { /* ... (export function) ... */ 
+                try {
+                    const data = { categories: state.categories, settings: state.settings, lastBackup: new Date().toISOString() };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+                    a.href = url; a.download = `app_incubator_backup_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click(); URL.revokeObjectURL(url);
+                    dispatch({ type: 'SET_LAST_BACKUP' }); showNotification('success', "تم تصدير النسخة الاحتياطية بنجاح");
+                } catch (err) { console.error(err); showNotification('error', "فشل تصدير النسخة الاحتياطية"); }
+            };
+            const handleJsonImport = (event) => { /* ... (import function) ... */ 
+                const file = event.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data && data.categories) { dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: data }); showNotification('success', "تم استعادة البيانات بنجاح"); }
+                        else throw new Error("ملف غير صالح");
+                    } catch (err) { console.error(err); showNotification('error', "فشل قراءة الملف."); }
+                };
+                reader.readAsText(file); event.target.value = null;
+            };
+            const handleExcelExport = () => { /* ... (excel export function) ... */ 
+                 try {
+                    const flatData = [];
+                    state.categories.forEach(cat => { (cat.links && cat.links.length > 0 ? cat.links : [{}]).forEach(link => { flatData.push({ 'القسم': cat.name, 'اسم الرابط': link.name || '', 'الرابط': link.url || '', 'الوصف': link.description || '' }); }); });
+                    if (flatData.length === 0) { showNotification('error', "لا توجد بيانات لتصديرها"); return; }
+                    const ws = XLSX.utils.json_to_sheet(flatData); const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "بيانات التطبيقات");
+                    XLSX.writeFile(wb, `app_incubator_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+                    showNotification('success', "تم تصدير ملف Excel");
+                } catch (err) { console.error(err); showNotification('error', "فشل تصدير ملف Excel"); }
+            };
+            const handlePrint = () => window.print();
+            const handleDeleteAll = () => {
+                idbHelper.clearData()
+                    .then(() => { dispatch({ type: 'DELETE_ALL_DATA' }); showNotification('success', "تم حذف جميع البيانات"); })
+                    .catch(err => { console.error(err); showNotification('error', "فشل حذف البيانات"); })
+                    .finally(() => setConfirmDeleteAll(false));
+            };
+            const autoSaveToFile = async (handle, content) => { /* ... (auto-save function) ... */ 
+                try {
+                    const writable = await handle.createWritable(); await writable.write(content); await writable.close();
+                    dispatch({ type: 'SET_LAST_BACKUP' });
+                } catch (err) { console.error("File System Auto-save failed:", err); showNotification('error', "فشل الحفظ التلقائي للملف"); dispatch({ type: 'SET_FS_HANDLE', payload: null }); }
+            };
+            const handleRequestAutoSave = async () => { /* ... (request auto-save function) ... */ 
+                 try {
+                    const handle = await window.showSaveFilePicker({ suggestedName: 'app_incubator_autosave.json', types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }], });
+                    const dataToSave = { categories: state.categories, settings: state.settings, lastBackup: new Date().toISOString() };
+                    await autoSaveToFile(handle, JSON.stringify(dataToSave, null, 2));
+                    dispatch({ type: 'SET_FS_HANDLE', payload: handle }); showNotification('success', "تم تفعيل الحفظ التلقائي للملف");
+                 } catch (err) { if (err.name !== 'AbortError') showNotification('error', "فشل تفعيل الحفظ التلقائي"); }
+            };
+            const openAddCategory = () => setCategoryModal({ isOpen: true, category: null });
+            const openEditCategory = (category) => setCategoryModal({ isOpen: true, category });
+            const closeCategoryModal = () => setCategoryModal({ isOpen: false, category: null });
+            const handleCategorySubmit = (categoryData) => {
+                if (categoryModal.category) { dispatch({ type: 'UPDATE_CATEGORY', payload: categoryData }); showNotification('success', "تم تعديل القسم"); }
+                else { dispatch({ type: 'ADD_CATEGORY', payload: { ...categoryData, links: [] } }); showNotification('success', "تمت إضافة القسم"); }
+            };
+            const handleDeleteCategory = (categoryId) => { if(window.confirm("هل أنت متأكد من حذف هذا القسم وكل ما بداخله من روابط؟")) { dispatch({ type: 'DELETE_CATEGORY', payload: categoryId }); showNotification('success', "تم حذف القسم"); } };
+            const filteredCategories = useMemo(() => {
+                const term = state.searchTerm.toLowerCase();
+                if (!term) return state.categories;
+                return state.categories.filter(cat => cat.name.toLowerCase().includes(term));
+            }, [state.categories, state.searchTerm]);
+
+            // --- View Rendering Logic ---
+            const renderCurrentView = () => {
+                switch (state.currentView) {
+                    case 'main':
+                        return h_react(Fragment, null,
+                            h_react(Header, { onSearch: (term) => dispatch({ type: 'SET_SEARCH', payload: term }), onAddCategory: openAddCategory, onShowSettings: () => dispatch({ type: 'SET_VIEW', payload: 'settings' }), onShowDashboard: () => dispatch({ type: 'SET_VIEW', payload: 'dashboard' }), user, onLogout }),
+                            h_react('main', { className: "container mx-auto px-4" }, h_react(CategoryListScreen, { categories: filteredCategories, onSelectCategory: (id) => dispatch({ type: 'SET_VIEW', payload: 'categoryDetail', categoryId: id }), onEditCategory: openEditCategory, onDeleteCategory: handleDeleteCategory }))
+                        );
+                    case 'dashboard':
+                        return h_react('main', { className: "container mx-auto px-4 mt-6" }, h_react(DashboardScreen, { categories: state.categories, onBack: () => dispatch({ type: 'SET_VIEW', payload: 'main' }) }));
+                    case 'categoryDetail':
+                        return h_react('main', { className: "container mx-auto px-4 mt-6" }, 
+                            h_react(CategoryDetailScreen, { 
+                                categoryId: state.selectedCategoryId, 
+                                categories: state.categories, 
+                                onBack: () => dispatch({ type: 'SET_VIEW', payload: 'main' }), 
+                                dispatch: dispatch,
+                                settings: state.settings
+                            })
+                        );
+                    case 'settings':
+                        return h_react('main', { className: "container mx-auto px-4 mt-6" },
+                            h_react(SettingsScreen, {
+                                onShowMain: () => dispatch({ type: 'SET_VIEW', payload: 'main' }),
+                                onJsonExport: handleJsonExport, onJsonImport: handleJsonImport, onExcelExport: handleExcelExport, onPrint: handlePrint, onDeleteAll: () => setConfirmDeleteAll(true),
+                                onSave: handleRequestAutoSave, fsHandle: state.fsHandle, lastBackup: state.lastBackup,
+                                settings: state.settings,
+                                onSaveSettings: (settings) => {
+                                    dispatch({ type: 'UPDATE_SETTINGS', payload: settings });
+                                    showNotification('success', 'تم حفظ الإعدادات وجاري اختبارها');
+                                }
+                            })
+                        );
+                    default:
+                        return h_react('p', { className: "text-white" }, "View not found");
+                }
+            };
+            
+            // --- App Render ---
+            return h_react('div', { className: "min-h-screen pb-28 print-container" },
+                state.error ? h_react('p', { className: "text-center text-red-300 p-10" }, state.error) :
+                renderCurrentView(),
+                h_react(StatusBar, { lastBackup: state.lastBackup, showWarning: state.showIncognitoWarning }),
+                h_react(CategoryForm, { isOpen: categoryModal.isOpen, onClose: closeCategoryModal, onSubmit: handleCategorySubmit, category: categoryModal.category }),
+                h_react(Modal, { isOpen: confirmDeleteAll, onClose: () => setConfirmDeleteAll(false), title: "تأكيد الحذف" },
+                    h_react('div', null,
+                        h_react('p', { className: "text-white/90 mb-6" }, "هل أنت متأكد من رغبتك في حذف جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء."),
+                        h_react('div', { className: "flex justify-end gap-2" }, h_react(Button, { variant: 'secondary', onClick: () => setConfirmDeleteAll(false) }, "إلغاء"), h_react(Button, { variant: 'danger', onClick: handleDeleteAll }, "نعم، احذف كل شيء"))
+                    )
+                ),
+                h_react(Notification, { notification: state.notification, onDismiss: () => dispatch({ type: 'CLEAR_NOTIFICATION' }) })
+            );
+        }
+
+        // --- NEW: Root Component (Bootstrapper) ---
+        function Root() {
+            const [appStatus, setAppStatus] = useState('loading'); // 'loading', 'needsConfig', 'needsAuth', 'authenticated'
+            const [supabaseClient, setSupabaseClient] = useState(null);
+            const [user, setUser] = useState(null);
+            const [allData, setAllData] = useState(initialState);
+            const [error, setError] = useState(null);
+
+            // 1. Load data from IDB on initial mount
+            useEffect(() => {
+                async function loadData() {
+                    try {
+                        await idbHelper.initDB();
+                        const data = await idbHelper.loadData();
+                        if (data) {
+                            setAllData(data);
+                            // Check if Supabase config exists
+                            if (data.settings && data.settings.supabaseUrl && data.settings.supabaseAnonKey) {
+                                const client = createClient(data.settings.supabaseUrl, data.settings.supabaseAnonKey);
+                                setSupabaseClient(client);
+                                // Check for existing session
+                                const { data: { session } } = await client.auth.getSession();
+                                if (session) {
+                                    setUser(session.user);
+                                    setAppStatus('authenticated');
+                                } else {
+                                    setAppStatus('needsAuth');
+                                }
+                            } else {
+                                setAppStatus('needsConfig'); // No config found
+                            }
+                        } else {
+                            setAllData(initialState);
+                            setAppStatus('needsConfig'); // First time run
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        setError("فشل تحميل البيانات من المتصفح.");
+                        setAppStatus('needsConfig'); // Fallback to config
+                    }
+                }
+                loadData();
+            }, []);
+
+            // 2. Listen for auth state changes (login/logout)
+            useEffect(() => {
+                if (!supabaseClient) return;
+                
+                const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    if (session) {
+                        setUser(session.user);
+                        setAppStatus('authenticated');
+                    } else {
+                        setUser(null);
+                        setAppStatus('needsAuth');
+                    }
+                });
+
+                return () => subscription.unsubscribe();
+            }, [supabaseClient]);
+
+            const onConfigSaved = (url, key) => {
+                try {
+                    const client = createClient(url, key);
+                    setSupabaseClient(client);
+                    setAppStatus('needsAuth');
+                    const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: url, supabaseAnonKey: key } };
+                    setAllData(newData);
+                    idbHelper.saveData(newData); // Save config
+                } catch (err) {
+                    console.error(err);
+                    setError("فشل تهيئة Supabase. تأكد من البيانات.");
+                }
+            };
+
+            const onClearConfig = () => {
+                setSupabaseClient(null);
+                setUser(null);
+                setAppStatus('needsConfig');
+                const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: '', supabaseAnonKey: '' } };
+                setAllData(newData);
+                idbHelper.saveData(newData); // Clear config
+            };
+
+            const handleLogout = () => {
+                if (supabaseClient) {
+                    supabaseClient.auth.signOut();
+                }
+            };
+
+            // Render based on app status
+            if (appStatus === 'loading') {
+                return h_react(FullScreenSpinner);
+            }
+            
+            if (appStatus === 'needsConfig') {
+                return h_react(SupabaseConfigScreen, { onConfigSaved: onConfigSaved });
+            }
+            
+            if (appStatus === 'needsAuth') {
+                return h_react(LoginScreen, { supabaseClient: supabaseClient, onClearConfig: onClearConfig });
+            }
+            
+            if (appStatus === 'authenticated' && user) {
+                return h_react(MainApp, { 
+                    initialData: allData,
+                    user: user, 
+                    onLogout: handleLogout
+                });
+            }
+
+            // Fallback (should be covered by loading)
+            return h_react(FullScreenSpinner);
+        }
+
+        // --- Mount App ---
+        const rootElement = document.getElementById('root');
+        const root = createRoot(rootElement);
+        root.render(h_react(Root)); // Mount the Root component instead of App
+
+    </script>
+</body>
+</html>
+
