@@ -18,7 +18,7 @@
     <!-- 4. Sheet.js (xlsx) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <!-- 5. NEW: Supabase Client -->
+    <!-- 5. Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- Tailwind Config & Custom Styles -->
@@ -128,7 +128,6 @@
         const h_react = React.createElement;
         const { useState, useEffect, useReducer, useRef, Fragment, useMemo } = React;
         const { createRoot } = ReactDOM;
-        // NEW: Supabase createClient
         const { createClient } = supabase;
 
         // --- START Tailwind UI SVG Icons ---
@@ -155,7 +154,6 @@
         const IconSpinner = ({ className = "w-4 h-4" }) => h_react('svg', { className: `animate-spin ${className}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, h_react('path', { d: "M12 3v3m0 12v3m0-9a3 3 0 110 6 3 3 0 010-6zm-6-3.172a3 3 0 010 5.196m12 0a3 3 0 010-5.196M6 6.828a3 3 0 015.196 0m0 10.344a3 3 0 01-5.196 0M3 12h3m12 0h3", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" }));
         const IconSparkles = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM18 12.75l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 18l-1.035.259a3.375 3.375 0 00-2.456 2.456L18 21.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 18l1.036.259a3.375 3.375 0 002.455 2.456L18 12.75z" }));
         const IconClipboard = () => h_react('svg', { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m-3 8.25h-3v3h3v-3z" }) );
-        // NEW: Logout Icon
         const IconLogout = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" }));
         // --- END Tailwind UI SVG Icons ---
 
@@ -218,7 +216,7 @@
         // --- App State ---
         const initialState = {
             categories: [],
-            isLoading: true, // Will be handled by Root
+            isLoading: true,
             error: null,
             searchTerm: '', 
             sortBy: { key: 'name', order: 'asc' },
@@ -232,8 +230,8 @@
             settings: {
                 openRouterKey: '',
                 openRouterModel: 'mistralai/mistral-7b-instruct',
-                supabaseUrl: '', // Now handled by Root
-                supabaseAnonKey: '', // Now handled by Root
+                supabaseUrl: '',
+                supabaseAnonKey: '',
                 cloudinaryCloudName: '',
                 cloudinaryPreset: ''
             }
@@ -243,7 +241,6 @@
         function appReducer(state, action) {
             let newState;
             switch (action.type) {
-                // LOAD actions are no longer needed here, handled by Root
                 case 'SET_VIEW':
                     newState = { ...state, currentView: action.payload, selectedCategoryId: action.categoryId || null };
                     break;
@@ -268,7 +265,7 @@
                 case 'SET_STATE_FROM_BACKUP':
                     newState = { ...state, categories: action.payload.categories || [], settings: { ...state.settings, ...action.payload.settings }, lastBackup: action.payload.lastBackup || new Date().toISOString(), isDirty: true };
                     break;
-                case 'UPDATE_SETTINGS': // This now only updates non-supabase settings
+                case 'UPDATE_SETTINGS':
                     newState = { ...state, settings: { ...state.settings, ...action.payload }, isDirty: true };
                     break;
                 case 'ADD_CATEGORY':
@@ -373,7 +370,7 @@
             );
         };
         
-        // --- Auth Screen Components (NEW) ---
+        // --- Auth Screen Components ---
 
         const SupabaseConfigScreen = ({ onConfigSaved }) => {
             const [url, setUrl] = useState('');
@@ -422,7 +419,6 @@
                 try {
                     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
-                    // No need to do anything on success, the onAuthStateChange listener in Root will handle it.
                 } catch (err) {
                     setError(err.message || "فشل تسجيل الدخول. تأكد من بياناتك.");
                 } finally {
@@ -446,7 +442,7 @@
             );
         };
 
-        // --- App-Specific Components (Renamed App -> MainApp) ---
+        // --- App-Specific Components (MainApp) ---
         
         const Header = ({ onSearch, onAddCategory, onShowSettings, onShowDashboard, user, onLogout }) => {
             return h_react('header', { className: "glass-card p-4 rounded-b-xl sticky top-0 z-30 mb-6 no-print" },
@@ -552,7 +548,22 @@
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
             const [analysis, setAnalysis] = useState({ description: '', technologies: '', code: '' });
-            const analysisPrompt = `... (analysis prompt as before) ...`; // Kept as before
+            const analysisPrompt = `
+                You are an expert web developer and software analyst.
+                Analyze the following URL: ${linkUrl}
+
+                Provide your analysis in three distinct parts:
+                1.  **Full Description:** A detailed description of the application, its purpose, and its content.
+                2.  **Technology Stack:** A description of all technologies used (frontend, backend, database, etc.) and an explanation of each technology's role in this application.
+                3.  **Generated Code:** Generate a representative, simplified, and runnable example of the application's source code (e.g., a single HTML file with CSS and JS). Do not write the entire massive codebase, but a complete, runnable, simplified example that demonstrates its core idea.
+
+                Respond *only* with a JSON object in this exact format, using Markdown for the code block:
+                {
+                  "description": "...",
+                  "technologies": "...",
+                  "code": "..."
+                }
+            `;
 
             useEffect(() => {
                 if (!isOpen) return;
@@ -701,25 +712,23 @@
             );
         };
         
-        // --- MODIFIED: SettingsScreen (Supabase fields removed) ---
         const SettingsScreen = ({ onShowMain, onJsonExport, onJsonImport, onExcelExport, onPrint, onDeleteAll, onSave, fsHandle, lastBackup, settings, onSaveSettings }) => {
             const importRef = useRef(null);
             const [localSettings, setLocalSettings] = useState(settings);
-            // Test results only for OpenRouter and Cloudinary
             const [testResults, setTestResults] = useState({ openRouter: { status: 'idle', message: '' }, cloudinary: { status: 'idle', message: '' } });
             const [isTesting, setIsTesting] = useState(false);
 
             useEffect(() => { setLocalSettings(settings); }, [settings]);
             const handleChange = (e) => { setLocalSettings({ ...localSettings, [e.target.name]: e.target.value }); };
             
-            const testOpenRouter = async (key, model) => { /* ... (test function) ... */ 
+            const testOpenRouter = async (key, model) => {
                  if (!key || !model) return { status: 'error', message: 'يرجى ملء المفتاح والنموذج' };
                 try {
                     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ "model": model, "messages": [{"role": "user", "content": "Test"}] }) });
                     if (res.ok) return { status: 'success', message: 'الاتصال ناجح' }; if (res.status === 401) return { status: 'error', message: 'المفتاح غير صالح' }; return { status: 'error', message: `فشل: ${res.statusText}` };
                 } catch (e) { return { status: 'error', message: 'فشل الاتصال (تحقق من الشبكة)' }; }
             };
-            const testCloudinary = async (cloudName) => { /* ... (test function) ... */ 
+            const testCloudinary = async (cloudName) => {
                  if (!cloudName) return { status: 'error', message: 'يرجى ملء اسم السحابة' };
                 try {
                     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/ping`);
@@ -730,7 +739,7 @@
 
             const handleSaveAndTest = async () => {
                 setIsTesting(true); 
-                onSaveSettings(localSettings); // Save first
+                onSaveSettings(localSettings);
                 setTestResults({ openRouter: { status: 'testing', message: '' }, cloudinary: { status: 'testing', message: '' } });
                 const [orResult, clResult] = await Promise.all([
                     testOpenRouter(localSettings.openRouterKey, localSettings.openRouterModel),
@@ -749,7 +758,6 @@
                 h_react(SettingCard, { title: "الاتصالات والخدمات السحابية", description: "أدخل مفاتيح API الخاصة بك للخدمات الخارجية. سيتم اختبارها عند الحفظ." },
                     h_react('div', { className: "space-y-6 w-full" },
                         h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "OpenRouter.ai"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "API Key", id: "openRouterKey", name: "openRouterKey", value: localSettings.openRouterKey, onChange: handleChange, type: "password", ...testResults.openRouter }), h_react(ApiInput, { label: "Model Name", id: "openRouterModel", name: "openRouterModel", value: localSettings.openRouterModel, onChange: handleChange, ...testResults.openRouter }))),
-                        // Supabase fieldset is REMOVED from here
                         h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "Cloudinary"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "Cloud Name", id: "cloudinaryCloudName", name: "cloudinaryCloudName", value: localSettings.cloudinaryCloudName, onChange: handleChange, ...testResults.cloudinary }), h_react(ApiInput, { label: "Upload Preset", id: "cloudinaryPreset", name: "cloudinaryPreset", value: localSettings.cloudinaryPreset, onChange: handleChange, status: 'idle' }))),
                         h_react(Button, { onClick: handleSaveAndTest, variant: 'primary', disabled: isTesting, className: "mt-4 w-full sm:w-auto" }, isTesting ? h_react(IconSpinner, { className: "w-5 h-5" }) : h_react(IconSave), isTesting ? "جاري الحفظ والاختبار..." : "حفظ واختبار الاتصالات")
                     )
@@ -769,15 +777,12 @@
             );
         };
 
-        // --- Main App Component (Renamed from App) ---
+        // --- MainApp Component ---
         function MainApp({ initialData, user, onLogout }) {
-            // Initialize reducer with data loaded by Root
             const [state, dispatch] = useReducer(appReducer, { ...initialData, isLoading: false }); 
-            
             const [categoryModal, setCategoryModal] = useState({ isOpen: false, category: null });
             const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
-            // Data persistence effect (saving)
             useEffect(() => {
                 if (state.isLoading || !state.isDirty) return;
                 const dataToSave = { categories: state.categories, lastBackup: state.lastBackup, settings: state.settings };
@@ -787,14 +792,12 @@
                 if (state.fsHandle) autoSaveToFile(state.fsHandle, JSON.stringify(dataToSave, null, 2));
             }, [state.categories, state.settings, state.isDirty, state.fsHandle, state.isLoading]);
             
-            // beforeunload effect
             useEffect(() => {
                 const handleBeforeUnload = (e) => { if (state.isDirty) { e.preventDefault(); e.returnValue = 'لديك تغييرات غير محفوظة. هل أنت متأكد من المغادرة؟'; } };
                 window.addEventListener('beforeunload', handleBeforeUnload);
                 return () => window.removeEventListener('beforeunload', handleBeforeUnload);
             }, [state.isDirty]);
             
-            // Incognito check
             useEffect(() => {
                  (async () => {
                     if (navigator.storage && navigator.storage.persist) { if (!(await navigator.storage.persisted())) dispatch({ type: 'SET_INCOGNITO_WARNING' }); }
@@ -802,12 +805,12 @@
                 })();
             }, []);
 
-            // --- Handlers (identical to before, but now inside MainApp) ---
+            // --- Handlers ---
             const showNotification = (type, message) => {
                 dispatch({ type: 'SET_NOTIFICATION', payload: { type, message } });
                 setTimeout(() => dispatch({ type: 'CLEAR_NOTIFICATION' }), 3000);
             };
-            const handleJsonExport = () => { /* ... (export function) ... */ 
+            const handleJsonExport = () => { 
                 try {
                     const data = { categories: state.categories, settings: state.settings, lastBackup: new Date().toISOString() };
                     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -817,7 +820,7 @@
                     dispatch({ type: 'SET_LAST_BACKUP' }); showNotification('success', "تم تصدير النسخة الاحتياطية بنجاح");
                 } catch (err) { console.error(err); showNotification('error', "فشل تصدير النسخة الاحتياطية"); }
             };
-            const handleJsonImport = (event) => { /* ... (import function) ... */ 
+            const handleJsonImport = (event) => { 
                 const file = event.target.files[0]; if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -829,7 +832,7 @@
                 };
                 reader.readAsText(file); event.target.value = null;
             };
-            const handleExcelExport = () => { /* ... (excel export function) ... */ 
+            const handleExcelExport = () => { 
                  try {
                     const flatData = [];
                     state.categories.forEach(cat => { (cat.links && cat.links.length > 0 ? cat.links : [{}]).forEach(link => { flatData.push({ 'القسم': cat.name, 'اسم الرابط': link.name || '', 'الرابط': link.url || '', 'الوصف': link.description || '' }); }); });
@@ -847,13 +850,13 @@
                     .catch(err => { console.error(err); showNotification('error', "فشل حذف البيانات"); })
                     .finally(() => setConfirmDeleteAll(false));
             };
-            const autoSaveToFile = async (handle, content) => { /* ... (auto-save function) ... */ 
+            const autoSaveToFile = async (handle, content) => { 
                 try {
                     const writable = await handle.createWritable(); await writable.write(content); await writable.close();
                     dispatch({ type: 'SET_LAST_BACKUP' });
                 } catch (err) { console.error("File System Auto-save failed:", err); showNotification('error', "فشل الحفظ التلقائي للملف"); dispatch({ type: 'SET_FS_HANDLE', payload: null }); }
             };
-            const handleRequestAutoSave = async () => { /* ... (request auto-save function) ... */ 
+            const handleRequestAutoSave = async () => { 
                  try {
                     const handle = await window.showSaveFilePicker({ suggestedName: 'app_incubator_autosave.json', types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }], });
                     const dataToSave = { categories: state.categories, settings: state.settings, lastBackup: new Date().toISOString() };
@@ -929,7 +932,7 @@
             );
         }
 
-        // --- NEW: Root Component (Bootstrapper) ---
+        // --- Root Component (Bootstrapper) ---
         function Root() {
             const [appStatus, setAppStatus] = useState('loading'); // 'loading', 'needsConfig', 'needsAuth', 'authenticated'
             const [supabaseClient, setSupabaseClient] = useState(null);
@@ -937,32 +940,56 @@
             const [allData, setAllData] = useState(initialState);
             const [error, setError] = useState(null);
 
-            // 1. Load data from IDB on initial mount
+            // 1. Load data from IDB on initial mount (with localStorage fallback)
             useEffect(() => {
                 async function loadData() {
                     try {
                         await idbHelper.initDB();
                         const data = await idbHelper.loadData();
-                        if (data) {
-                            setAllData(data);
-                            // Check if Supabase config exists
-                            if (data.settings && data.settings.supabaseUrl && data.settings.supabaseAnonKey) {
-                                const client = createClient(data.settings.supabaseUrl, data.settings.supabaseAnonKey);
-                                setSupabaseClient(client);
-                                // Check for existing session
-                                const { data: { session } } = await client.auth.getSession();
-                                if (session) {
-                                    setUser(session.user);
-                                    setAppStatus('authenticated');
-                                } else {
-                                    setAppStatus('needsAuth');
-                                }
+                        let effectiveData = data || initialState;
+                        
+                        let sbUrl = effectiveData.settings.supabaseUrl;
+                        let sbKey = effectiveData.settings.supabaseAnonKey;
+
+                        // --- [START] VERCEL FALLBACK LOGIC ---
+                        if (!sbUrl || !sbKey) {
+                            console.log("IDB config missing, checking localStorage...");
+                            const lsUrl = localStorage.getItem('supabaseUrl');
+                            const lsKey = localStorage.getItem('supabaseKey');
+
+                            if (lsUrl && lsKey) {
+                                console.log("Config found in localStorage. Applying.");
+                                sbUrl = lsUrl;
+                                sbKey = lsKey;
+                                effectiveData = {
+                                    ...effectiveData,
+                                    settings: {
+                                        ...effectiveData.settings,
+                                        supabaseUrl: sbUrl,
+                                        supabaseAnonKey: sbKey
+                                    }
+                                };
+                                await idbHelper.saveData(effectiveData); // Resync to IDB
+                            }
+                        }
+                        // --- [END] VERCEL FALLBACK LOGIC ---
+
+                        setAllData(effectiveData); // Set state with whatever was found
+
+                        if (sbUrl && sbKey) {
+                            // We have keys (from IDB or LS), let's try to init
+                            const client = createClient(sbUrl, sbKey);
+                            setSupabaseClient(client);
+                            const { data: { session } } = await client.auth.getSession();
+                            if (session) {
+                                setUser(session.user);
+                                setAppStatus('authenticated');
                             } else {
-                                setAppStatus('needsConfig'); // No config found
+                                setAppStatus('needsAuth');
                             }
                         } else {
-                            setAllData(initialState);
-                            setAppStatus('needsConfig'); // First time run
+                            // No keys found anywhere
+                            setAppStatus('needsConfig');
                         }
                     } catch (err) {
                         console.error(err);
@@ -990,6 +1017,7 @@
                 return () => subscription.unsubscribe();
             }, [supabaseClient]);
 
+            // --- [START] MODIFIED onConfigSaved ---
             const onConfigSaved = (url, key) => {
                 try {
                     const client = createClient(url, key);
@@ -997,21 +1025,37 @@
                     setAppStatus('needsAuth');
                     const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: url, supabaseAnonKey: key } };
                     setAllData(newData);
-                    idbHelper.saveData(newData); // Save config
+                    
+                    // Save to IDB (existing)
+                    idbHelper.saveData(newData); 
+                    
+                    // Save to localStorage (NEW)
+                    localStorage.setItem('supabaseUrl', url);
+                    localStorage.setItem('supabaseKey', key);
+
                 } catch (err) {
                     console.error(err);
                     setError("فشل تهيئة Supabase. تأكد من البيانات.");
                 }
             };
+            // --- [END] MODIFIED onConfigSaved ---
 
+            // --- [START] MODIFIED onClearConfig ---
             const onClearConfig = () => {
                 setSupabaseClient(null);
                 setUser(null);
                 setAppStatus('needsConfig');
                 const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: '', supabaseAnonKey: '' } };
                 setAllData(newData);
-                idbHelper.saveData(newData); // Clear config
+                
+                // Clear from IDB (existing)
+                idbHelper.saveData(newData); 
+
+                // Clear from localStorage (NEW)
+                localStorage.removeItem('supabaseUrl');
+                localStorage.removeItem('supabaseKey');
             };
+            // --- [END] MODIFIED onClearConfig ---
 
             const handleLogout = () => {
                 if (supabaseClient) {
@@ -1040,14 +1084,13 @@
                 });
             }
 
-            // Fallback (should be covered by loading)
             return h_react(FullScreenSpinner);
         }
 
         // --- Mount App ---
         const rootElement = document.getElementById('root');
         const root = createRoot(rootElement);
-        root.render(h_react(Root)); // Mount the Root component instead of App
+        root.render(h_react(Root)); 
 
     </script>
 </body>
