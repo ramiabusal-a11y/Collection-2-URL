@@ -18,9 +18,6 @@
     <!-- 4. Sheet.js (xlsx) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <!-- 5. Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <!-- Tailwind Config & Custom Styles -->
     <script>
         tailwind.config = {
@@ -38,6 +35,13 @@
                     },
                     animation: {
                         'spin': 'spin 1s linear infinite',
+                        'fade-in': 'fadeIn 0.2s ease-out', // Added for info popup
+                    },
+                    keyframes: { // Added for info popup
+                        fadeIn: {
+                            '0%': { opacity: 0, transform: 'scale(0.95)' },
+                            '100%': { opacity: 1, transform: 'scale(1)' },
+                        }
                     }
                 }
             }
@@ -83,19 +87,20 @@
         }
 
         /* Page transition animation */
-        @keyframes fadeIn {
+        @keyframes fadeInPage {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
+        .animate-fade-in-page {
+            animation: fadeInPage 0.3s ease-out;
         }
         
         /* Analysis modal textarea */
         .analysis-textarea {
             background: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            height: 150px;
+            min-height: 150px;
+            max-height: 300px;
             font-family: monospace;
             font-size: 0.875rem;
             color: #f0f0f0;
@@ -128,7 +133,6 @@
         const h_react = React.createElement;
         const { useState, useEffect, useReducer, useRef, Fragment, useMemo } = React;
         const { createRoot } = ReactDOM;
-        const { createClient } = supabase;
 
         // --- START Tailwind UI SVG Icons ---
         const IconBox = () => h_react('svg', { fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor", className: "w-6 h-6" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" }));
@@ -153,8 +157,13 @@
         const IconXCircle = ({ className = "w-4 h-4" }) => h_react('svg', { className, fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }));
         const IconSpinner = ({ className = "w-4 h-4" }) => h_react('svg', { className: `animate-spin ${className}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, h_react('path', { d: "M12 3v3m0 12v3m0-9a3 3 0 110 6 3 3 0 010-6zm-6-3.172a3 3 0 010 5.196m12 0a3 3 0 010-5.196M6 6.828a3 3 0 015.196 0m0 10.344a3 3 0 01-5.196 0M3 12h3m12 0h3", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" }));
         const IconSparkles = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM18 12.75l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 18l-1.035.259a3.375 3.375 0 00-2.456 2.456L18 21.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 18l1.036.259a3.375 3.375 0 002.455 2.456L18 12.75z" }));
-        const IconClipboard = () => h_react('svg', { className: "w-4 h-4", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m-3 8.25h-3v3h3v-3z" }) );
-        const IconLogout = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" }));
+        const IconClipboard = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V4.5A2.25 2.25 0 019 2.25h3a2.25 2.25 0 012.25 2.25v.168c0 .212.03.418.084.612m-3 8.25h-3v3h3v-3z" }) );
+        const IconInformationCircle = () => h_react('svg', { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", strokeWidth: 1.5, stroke: "currentColor" }, h_react('path', { strokeLinecap: "round", strokeLinejoin: "round", d: "M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" }));
+        // --- [START] NEW WhatsApp ICON ---
+        const IconWhatsApp = () => h_react('svg', { className: "w-5 h-5", fill: "currentColor", viewBox: "0 0 24 24" }, 
+            h_react('path', { d: "M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.61 15.36 3.48 16.84L2 22L7.31 20.58C8.75 21.37 10.36 21.82 12.04 21.82C17.5 21.82 21.95 17.37 21.95 11.91C21.95 6.45 17.5 2 12.04 2ZM12.04 3.67C16.59 3.67 20.28 7.36 20.28 11.91C20.28 16.46 16.59 20.15 12.04 20.15C10.49 20.15 9.01 19.74 7.74 19L7.38 18.8L4.47 19.53L5.22 16.7L4.97 16.32C4.14 14.93 3.79 13.4 3.79 11.91C3.79 7.36 7.48 3.67 12.04 3.67ZM17.36 14.97C17.11 15.68 16.12 16.18 15.39 16.32C14.82 16.43 14.12 16.5 12.3 16.03C10.03 15.42 8.35 13.9 8.21 13.74C8.07 13.58 7.02 12.33 7.02 11.08C7.02 9.84 7.8 9.07 8.05 8.82C8.3 8.57 8.63 8.52 8.88 8.52C9.13 8.52 9.33 8.52 9.48 8.52C9.63 8.52 9.83 8.57 10.03 8.97C10.23 9.38 10.78 10.58 10.88 10.73C10.98 10.88 11.08 11.08 11 11.18C10.9 11.28 10.75 11.33 10.5 11.58C10.25 11.83 10.09 11.96 9.94 12.11C9.79 12.26 9.64 12.41 9.84 12.71C10.04 13.01 10.63 13.85 11.49 14.6C12.52 15.51 13.34 15.83 13.69 16C13.84 16.05 14.12 16.03 14.27 15.88C14.47 15.68 14.77 15.25 15.02 14.97C15.27 14.69 15.52 14.64 15.82 14.74C16.12 14.84 17.11 15.34 17.36 15.59C17.61 15.84 17.71 15.94 17.61 16.09C17.51 16.24 17.41 16.34 17.36 14.97Z" })
+        );
+        // --- [END] NEW WhatsApp ICON ---
         // --- END Tailwind UI SVG Icons ---
 
         // --- IndexedDB Helper ---
@@ -230,17 +239,25 @@
             settings: {
                 openRouterKey: '',
                 openRouterModel: 'mistralai/mistral-7b-instruct',
-                supabaseUrl: '',
-                supabaseAnonKey: '',
-                cloudinaryCloudName: '',
-                cloudinaryPreset: ''
             }
         };
 
-        // --- App Reducer (for MainApp) ---
+        // --- App Reducer ---
         function appReducer(state, action) {
             let newState;
             switch (action.type) {
+                case 'LOAD_SUCCESS':
+                    newState = { 
+                        ...state, 
+                        ...action.payload, 
+                        settings: { ...initialState.settings, ...(action.payload.settings || {}) }, 
+                        isLoading: false, 
+                        isDirty: false 
+                    };
+                    break;
+                case 'LOAD_FAILURE':
+                    newState = { ...state, error: action.payload, isLoading: false };
+                    break;
                 case 'SET_VIEW':
                     newState = { ...state, currentView: action.payload, selectedCategoryId: action.categoryId || null };
                     break;
@@ -370,81 +387,9 @@
             );
         };
         
-        // --- Auth Screen Components ---
-
-        const SupabaseConfigScreen = ({ onConfigSaved }) => {
-            const [url, setUrl] = useState('');
-            const [key, setKey] = useState('');
-            const [error, setError] = useState(null);
-
-            const handleSave = () => {
-                setError(null);
-                if (!url || !key) {
-                    setError("يرجى ملء كلا الحقلين.");
-                    return;
-                }
-                try {
-                    // Test creating a client first
-                    createClient(url, key);
-                    onConfigSaved(url, key);
-                } catch (err) {
-                    setError("الإعدادات غير صالحة. تأكد من الرابط والمفتاح.");
-                }
-            };
-
-            return h_react('div', { className: "min-h-screen flex items-center justify-center p-4 animate-fade-in" },
-                h_react('div', { className: "glass-card w-full max-w-md p-8" },
-                    h_react('h2', { className: "text-3xl font-bold text-white text-center mb-6" }, "ضبط اتصال Supabase"),
-                    h_react('p', { className: "text-white/80 text-center mb-6" }, "يرجى إدخال بيانات Supabase الخاصة بك للبدء. هذه الخطوة مطلوبة مرة واحدة فقط."),
-                    error && h_react('div', { className: 'bg-red-500/80 p-3 rounded-lg text-white text-center mb-4' }, error),
-                    h_react('form', { onSubmit: (e) => e.preventDefault() },
-                        h_react(Input, { label: "Supabase URL", id: "supabaseUrl", value: url, onChange: (e) => setUrl(e.target.value), placeholder: "https://your-project.supabase.co" }),
-                        h_react(Input, { label: "Supabase Anon Key", id: "supabaseKey", type: "password", value: key, onChange: (e) => setKey(e.target.value), placeholder: "ey..." }),
-                        h_react(Button, { onClick: handleSave, variant: 'primary', className: 'w-full mt-4' }, "حفظ ومتابعة")
-                    )
-                )
-            );
-        };
-
-        const LoginScreen = ({ supabaseClient, onClearConfig }) => {
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-            const [error, setError] = useState(null);
-            
-            const handleLogin = async (e) => {
-                e.preventDefault();
-                setIsLoading(true);
-                setError(null);
-                try {
-                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                } catch (err) {
-                    setError(err.message || "فشل تسجيل الدخول. تأكد من بياناتك.");
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
-            return h_react('div', { className: "min-h-screen flex items-center justify-center p-4 animate-fade-in" },
-                h_react('div', { className: "glass-card w-full max-w-md p-8" },
-                    h_react('h2', { className: "text-3xl font-bold text-white text-center mb-6" }, "تسجيل الدخول"),
-                    error && h_react('div', { className: 'bg-red-500/80 p-3 rounded-lg text-white text-center mb-4' }, error),
-                    h_react('form', { onSubmit: handleLogin },
-                        h_react(Input, { label: "البريد الإلكتروني", id: "email", type: "email", value: email, onChange: (e) => setEmail(e.target.value) }),
-                        h_react(Input, { label: "كلمة المرور", id: "password", type: "password", value: password, onChange: (e) => setPassword(e.target.value) }),
-                        h_react(Button, { type: 'submit', variant: 'primary', className: 'w-full mt-4', disabled: isLoading }, 
-                            isLoading ? h_react(IconSpinner, { className: 'w-5 h-5' }) : "تسجيل الدخول"
-                        ),
-                        h_react(Button, { onClick: onClearConfig, variant: 'secondary', className: 'w-full mt-2' }, "تغيير إعدادات Supabase")
-                    )
-                )
-            );
-        };
-
-        // --- App-Specific Components (MainApp) ---
+        // --- App-Specific Components ---
         
-        const Header = ({ onSearch, onAddCategory, onShowSettings, onShowDashboard, user, onLogout }) => {
+        const Header = ({ onSearch, onAddCategory, onShowSettings, onShowDashboard }) => {
             return h_react('header', { className: "glass-card p-4 rounded-b-xl sticky top-0 z-30 mb-6 no-print" },
                 h_react('div', { className: "flex flex-col md:flex-row items-center justify-between gap-4" },
                     h_react('h1', { className: "text-2xl font-bold text-white text-center" }, "حاضنة التطبيقات والأجندة"),
@@ -456,10 +401,8 @@
                 h_react('div', { className: "mt-4 flex flex-wrap items-center justify-center gap-2" },
                     h_react(Button, { onClick: onAddCategory, variant: 'primary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconPlus), "إضافة قسم جديد"),
                     h_react(Button, { onClick: onShowDashboard, variant: 'secondary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconChartBar), "عرض الإحصائيات"),
-                    h_react(Button, { onClick: onShowSettings, variant: 'secondary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconSettings), "الإعدادات والأمان"),
-                    h_react(Button, { onClick: onLogout, variant: 'danger', className: 'flex-grow sm:flex-grow-0' }, h_react(IconLogout), "خروج")
-                ),
-                h_react('p', { className: "text-center text-white/70 text-sm mt-3" }, `مرحباً، ${user.email}`)
+                    h_react(Button, { onClick: onShowSettings, variant: 'secondary', className: 'flex-grow sm:flex-grow-0' }, h_react(IconSettings), "الإعدادات والأمان")
+                )
             );
         };
 
@@ -486,7 +429,7 @@
                 h_react('div', null, h_react('h4', { className: "text-sm font-medium text-white/80" }, title), h_react('p', { className: "text-3xl font-bold text-white" }, value))
             );
 
-            return h_react('div', { className: "animate-fade-in" },
+            return h_react('div', { className: "animate-fade-in-page" },
                 h_react('div', { className: "flex items-center justify-between mb-6" }, h_react('h2', { className: "text-3xl font-bold text-white" }, "لوحة الإحصائيات"), h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية")),
                 h_react('div', { className: "mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6" },
                     h_react('div', { className: "lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6" }, h_react(StatCard, { title: "إجمالي الأقسام", value: stats.totalCategories, icon: h_react(IconBox) }), h_react(StatCard, { title: "إجمالي الروابط", value: stats.totalLinks, icon: h_react(IconLink, { className: "w-6 h-6" }) })),
@@ -537,10 +480,10 @@
                 h_react('div', { className: "flex items-center justify-between mb-2" },
                     h_react('h4', { className: "text-lg font-semibold text-white" }, title),
                     h_react(Button, { onClick: handleCopy, variant: 'secondary', className: 'px-3 py-1 text-xs' },
-                        copied ? h_react(IconCheck, { className: "w-4 h-4" }) : h_react(IconClipboard), copied ? "تم النسخ!" : "نسخ"
+                        copied ? h_react(IconCheck, { className: "w-4 h-4" }) : h_react(IconClipboard, { className: "w-5 h-5" }), copied ? "تم النسخ!" : "نسخ"
                     )
                 ),
-                h_react('textarea', { readOnly: true, value: content, className: "w-full p-3 text-white placeholder-white/60 rounded-lg focus:outline-none analysis-textarea", rows: 6 })
+                h_react('textarea', { readOnly: true, value: content, className: "w-full p-3 text-white placeholder-white/60 rounded-lg focus:outline-none analysis-textarea", style: { resize: 'vertical' } })
             );
         };
 
@@ -548,16 +491,32 @@
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
             const [analysis, setAnalysis] = useState({ description: '', technologies: '', code: '' });
+            
             const analysisPrompt = `
-                You are an expert web developer and software analyst.
-                Analyze the following URL: ${linkUrl}
+                أنت محلل برمجيات وخبير في هندسة الويب. مهمتك هي تحليل الرابط التالي: ${linkUrl}
 
-                Provide your analysis in three distinct parts:
-                1.  **Full Description:** A detailed description of the application, its purpose, and its content.
-                2.  **Technology Stack:** A description of all technologies used (frontend, backend, database, etc.) and an explanation of each technology's role in this application.
-                3.  **Generated Code:** Generate a representative, simplified, and runnable example of the application's source code (e.g., a single HTML file with CSS and JS). Do not write the entire massive codebase, but a complete, runnable, simplified example that demonstrates its core idea.
+                يجب أن تقدم تحليلك باللغة العربية الفصحى وبشكل احترافي.
+                قم بإرجاع كائن JSON فقط، بالصيغة المحددة أدناه.
 
-                Respond *only* with a JSON object in this exact format, using Markdown for the code block:
+                1.  **الوصف التعريفي (description):**
+                    اكتب وصفاً تعريفياً ملهماً وشاملاً باللغة العربية. يجب أن يشرح طبيعة التطبيق، الهدف منه، ووظائفه الرئيسية بالتفصيل.
+
+                2.  **التقنيات المستخدمة (technologies):**
+                    قم بعمل تحليل عميق لـ "كل" التقنيات الظاهرة (client-side) التي يمكنك رصدها (من A-Z).
+                    - اذكر إطارات العمل (React, Vue, Angular, etc.).
+                    - اذكر مكتبات (jQuery, etc.).
+                    - اذكر أدوات (Webpack, etc.).
+                    - اذكر لغات (JavaScript, TypeScript).
+                    - اشرح وظيفة كل تقنية تم رصدها في هذا التطبيق تحديداً.
+                    - (ملاحظة: أنت لا تستطيع رؤية الكود المصدري للخلفية (backend)، لذا قم بتحليل الواجهة الأمامية (frontend) فقط).
+
+                3.  **الكود المُنشأ (code):**
+                    **هام: لا تحاول سحب الكود المصدري الفعلي، فهو غير ممكن.**
+                    بدلاً من ذلك، قم بـ "إنشاء" أفضل وأشمل مثال كود ممكن (من A-Z) يكون قابلاً للتشغيل ويمثل الفكرة الأساسية للتطبيق الذي قمت بتحليله.
+                    - يجب أن يكون الكود في ملف واحد (HTML, CSS, JS).
+                    - يجب أن يكون الكود كاملاً وقابلاً للنسخ والتشغيل مباشرة.
+
+                تأكد من أن الإجابة هي كائن JSON صالح فقط:
                 {
                   "description": "...",
                   "technologies": "...",
@@ -582,7 +541,9 @@
                         if (!response.ok) { const errData = await response.json(); throw new Error(errData.error.message || `Error: ${response.status}`); }
                         const data = await response.json();
                         const content = data.choices[0].message.content;
-                        const parsedContent = JSON.parse(content);
+                        const jsonMatch = content.match(/\{[\s\S]*\}/);
+                        if (!jsonMatch) { throw new Error("لم يتم إرجاع صيغة JSON صالحة من الـ AI."); }
+                        const parsedContent = JSON.parse(jsonMatch[0]);
                         setAnalysis(parsedContent);
                     } catch (err) { console.error("Analysis failed:", err); setError(`فشل التحليل: ${err.message}. (تحقق من المفتاح والنموذج في الإعدادات)`); } 
                     finally { setIsLoading(false); }
@@ -595,37 +556,95 @@
                     isLoading ? h_react('div', { className: "flex flex-col items-center justify-center h-64" }, h_react(Spinner), h_react('p', { className: "text-white/80 mt-4" }, "جاري تحليل الرابط..."))
                     : error ? h_react('div', { className: "flex flex-col items-center justify-center h-64" }, h_react(IconXCircle, { className: "w-12 h-12 text-red-400" }), h_react('p', { className: "text-red-300 mt-4 text-center" }, error))
                     : h_react('div', { className: "space-y-4" },
-                        h_react(CopyableTextarea, { title: "الوصف الكامل للتطبيق", content: analysis.description }),
-                        h_react(CopyableTextarea, { title: "التقنيات المستخدمة ووظيفتها", content: analysis.technologies }),
-                        h_react(CopyableTextarea, { title: "مثال على الكود المصدري (A-Z)", content: analysis.code })
+                        h_react(CopyableTextarea, { title: "الوصف التعريفي", content: analysis.description }),
+                        h_react(CopyableTextarea, { title: "التقنيات المستخدمة (A-Z)", content: analysis.technologies }),
+                        h_react(CopyableTextarea, { title: "الكود المُنشأ (A-Z)", content: analysis.code })
                     )
                 )
             );
         };
         
-        const LinkItem = ({ link, onEdit, onDelete, onAnalyze }) => {
+        // --- [START] UPDATED LinkItem Component ---
+        const LinkItem = ({ link, onEdit, onDelete, onAnalyze, onNotify }) => {
+            const [showInfo, setShowInfo] = useState(false);
+            const [copied, setCopied] = useState(false); // State for copy button
+
+            const handleCopy = (e) => {
+                e.stopPropagation();
+                const ta = document.createElement('textarea');
+                ta.value = link.url; ta.style.position = 'fixed'; ta.style.opacity = 0;
+                document.body.appendChild(ta); ta.select();
+                try {
+                    document.execCommand('copy'); 
+                    setCopied(true);
+                    onNotify('success', 'تم نسخ الرابط!'); // Use main app notification
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) { 
+                    console.error('Failed to copy text: ', err); 
+                    onNotify('error', 'فشل نسخ الرابط');
+                }
+                document.body.removeChild(ta);
+            };
+
+            const handleWhatsAppShare = (e) => {
+                e.stopPropagation();
+                const text = encodeURIComponent(`${link.name}\n${link.url}`);
+                window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
+            };
+            
             return h_react('div', { className: "p-4 bg-white/10 rounded-lg transition-all group relative" },
-                h_react('div', { className: "absolute top-4 end-4 flex-shrink-0 flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity no-print" },
-                    h_react(Button, { onClick: () => onEdit(link), variant: 'ghost', className: 'p-1 h-8 w-8' }, h_react(IconPencil)),
-                    h_react(Button, { onClick: () => onDelete(link.id), variant: 'ghost', className: 'p-1 h-8 w-8 text-red-300 hover:bg-red-500/30' }, h_react(IconTrash))
+                h_react('div', { className: "absolute top-4 end-4 flex-shrink-0 flex gap-1 z-10" },
+                    // New Info Button
+                    h_react(Button, { 
+                        onClick: (e) => { e.stopPropagation(); setShowInfo(true); },
+                        variant: 'ghost', 
+                        className: 'p-1 h-8 w-8 text-blue-300 hover:bg-blue-500/30' 
+                    }, h_react(IconInformationCircle)),
+                    
+                    h_react(Button, { onClick: (e) => { e.stopPropagation(); onEdit(link); }, variant: 'ghost', className: 'p-1 h-8 w-8' }, h_react(IconPencil)),
+                    h_react(Button, { onClick: (e) => { e.stopPropagation(); onDelete(link.id); }, variant: 'ghost', className: 'p-1 h-8 w-8 text-red-300 hover:bg-red-500/30' }, h_react(IconTrash))
                 ),
-                h_react('div', { className: "max-w-[calc(100%-60px)]" },
+                
+                showInfo && h_react(Fragment, null,
+                    h_react('div', { className: "fixed inset-0 z-10", onClick: (e) => { e.stopPropagation(); setShowInfo(false); } }),
+                    h_react('div', { className: "absolute top-12 end-4 z-20 w-72 p-4 glass-card border border-white/50 rounded-lg shadow-lg animate-fade-in" },
+                        h_react(Button, { onClick: (e) => { e.stopPropagation(); setShowInfo(false); }, variant: 'ghost', className: 'absolute top-2 end-2 p-1 h-7 w-7' }, h_react(IconX, { className: 'w-5 h-5' })),
+                        h_react('h5', { className: "text-base font-semibold text-white mb-2 pr-6 break-words" }, link.name),
+                        h_react('p', { className: "text-sm text-white/80 break-words" }, link.description || "لا يوجد وصف متاح.")
+                    )
+                ),
+
+                h_react('div', { className: "max-w-[calc(100%-80px)]" },
                     h_react('h4', { className: "text-lg font-semibold text-white truncate" }, link.name),
                     h_react('p', { className: "text-sm text-white/80 mt-1 truncate" }, link.description),
                     h_react('p', { className: "text-xs text-indigo-200/70 mt-2 truncate print-hidden" }, link.url)
                 ),
-                h_react('div', { className: "mt-4 pt-4 border-t border-white/20 flex flex-col sm:flex-row gap-2 no-print" },
-                    h_react('a', { href: link.url, target: "_blank", rel: "noopener noreferrer", className: "px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500 flex-1" }, 
-                        h_react(IconLink, {className: "w-5 h-5"}), "فتح الرابط"
+                
+                // --- [START] UPDATED BUTTONS SECTION ---
+                h_react('div', { className: "mt-4 pt-4 border-t border-white/20 grid grid-cols-2 gap-2 no-print" },
+                    // Open Link
+                    h_react('a', { href: link.url, target: "_blank", rel: "noopener noreferrer", className: "px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-md flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500 text-sm" }, 
+                        h_react(IconLink, {className: "w-5 h-5"}), "فتح"
                     ),
-                    h_react(Button, { onClick: () => onAnalyze(link.url), variant: 'secondary', className: 'flex-1' }, 
-                        h_react(IconSparkles, {className: "w-5 h-5"}), "تحليل الرابط (AI)"
+                    // Analyze Link
+                    h_react(Button, { onClick: () => onAnalyze(link.url), variant: 'secondary', className: 'text-sm' }, 
+                        h_react(IconSparkles, {className: "w-5 h-5"}), "تحليل"
+                    ),
+                    // Copy Link
+                    h_react(Button, { onClick: handleCopy, variant: 'secondary', className: 'text-sm' }, 
+                        copied ? h_react(IconCheck, { className: "w-5 h-5 text-green-300" }) : h_react(IconClipboard, { className: "w-5 h-5" }), copied ? "تم النسخ!" : "نسخ"
+                    ),
+                    // Share WhatsApp
+                    h_react(Button, { onClick: handleWhatsAppShare, variant: 'secondary', className: 'text-sm' }, 
+                        h_react(IconWhatsApp), "واتساب"
                     )
                 )
+                // --- [END] UPDATED BUTTONS SECTION ---
             );
         };
+        // --- [END] UPDATED LinkItem Component ---
         
-        const CategoryDetailCard = ({ category, onAddLink, onEditLink, onDeleteLink, settings }) => {
+        const CategoryDetailCard = ({ category, onAddLink, onEditLink, onDeleteLink, settings, onNotify }) => {
             const [linkModal, setLinkModal] = useState({ isOpen: false, link: null });
             const [linkSearchTerm, setLinkSearchTerm] = useState('');
             const [analysisModal, setAnalysisModal] = useState({ isOpen: false, linkUrl: null });
@@ -648,7 +667,14 @@
                     ),
                     h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4" },
                         filteredLinks.length > 0 ?
-                            filteredLinks.map(link => h_react(LinkItem, { key: link.id, link, onEdit: openEditLink, onDelete: (linkId) => onDeleteLink(category.id, linkId), onAnalyze: (linkUrl) => setAnalysisModal({ isOpen: true, linkUrl: linkUrl }) })) :
+                            filteredLinks.map(link => h_react(LinkItem, { 
+                                key: link.id, 
+                                link, 
+                                onEdit: openEditLink, 
+                                onDelete: (linkId) => onDeleteLink(category.id, linkId), 
+                                onAnalyze: (linkUrl) => setAnalysisModal({ isOpen: true, linkUrl: linkUrl }),
+                                onNotify: onNotify // Pass notification handler down
+                            })) :
                             h_react('p', { className: "text-white/70 md:col-span-2 lg:col-span-3" }, linkSearchTerm ? "لا توجد نتائج بحث مطابقة." : "لا توجد روابط في هذا القسم بعد.")
                     ),
                     h_react(Button, { onClick: openAddLink, variant: 'secondary', className: "w-full no-print" }, h_react(IconPlus), "إضافة رابط جديد لهذا القسم")
@@ -672,28 +698,35 @@
                     )
                 );
             };
-            return h_react('div', { className: "space-y-6 animate-fade-in" },
+            return h_react('div', { className: "space-y-6 animate-fade-in-page" },
                 categories.length > 0 ?
                     categories.map(cat => h_react(CategoryListItem, { key: cat.id, category: cat, onClick: onSelectCategory, onEdit: onEditCategory, onDelete: onDeleteCategory })) :
                     h_react('div', { className: "glass-card p-10 text-center" }, h_react('p', { className: "text-xl text-white/80" }, "لم تقم بإضافة أي أقسام بعد. ابدأ بإضافة قسم جديد."))
             );
         };
         
-        const CategoryDetailScreen = ({ categoryId, categories, onBack, dispatch, settings }) => {
+        const CategoryDetailScreen = ({ categoryId, categories, onBack, dispatch, settings, onNotify }) => {
             const category = useMemo(() => categories.find(c => c.id === categoryId), [categories, categoryId]);
             const handleAddLink = (categoryId, link) => dispatch({ type: 'ADD_LINK', payload: { categoryId, link } });
             const handleEditLink = (categoryId, link) => dispatch({ type: 'UPDATE_LINK', payload: { categoryId, link } });
             const handleDeleteLink = (categoryId, linkId) => { if(window.confirm("هل أنت متأكد من حذف هذا الرابط؟")) { dispatch({ type: 'DELETE_LINK', payload: { categoryId, linkId } }); } };
             
             if (!category) {
-                return h_react('div', { className: "animate-fade-in" }, h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية"), h_react('p', { className: "text-center text-white mt-10" }, "لم يتم العثور على القسم."));
+                return h_react('div', { className: "animate-fade-in-page" }, h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية"), h_react('p', { className: "text-center text-white mt-10" }, "لم يتم العثور على القسم."));
             }
-            return h_react('div', { className: "animate-fade-in" },
+            return h_react('div', { className: "animate-fade-in-page" },
                 h_react('div', { className: "flex items-center justify-between mb-6" },
                     h_react('h2', { className: "text-3xl font-bold text-white truncate" }, category.name),
                     h_react(Button, { onClick: onBack, variant: 'secondary' }, h_react(IconArrowRight), "رجوع للرئيسية")
                 ),
-                h_react(CategoryDetailCard, { category: category, onAddLink: handleAddLink, onEditLink: handleEditLink, onDeleteLink: handleDeleteLink, settings: settings })
+                h_react(CategoryDetailCard, { 
+                    category: category, 
+                    onAddLink: handleAddLink, 
+                    onEditLink: handleEditLink, 
+                    onDeleteLink: handleDeleteLink, 
+                    settings: settings,
+                    onNotify: onNotify // Pass notification handler down
+                })
             );
         };
 
@@ -715,7 +748,7 @@
         const SettingsScreen = ({ onShowMain, onJsonExport, onJsonImport, onExcelExport, onPrint, onDeleteAll, onSave, fsHandle, lastBackup, settings, onSaveSettings }) => {
             const importRef = useRef(null);
             const [localSettings, setLocalSettings] = useState(settings);
-            const [testResults, setTestResults] = useState({ openRouter: { status: 'idle', message: '' }, cloudinary: { status: 'idle', message: '' } });
+            const [testResults, setTestResults] = useState({ openRouter: { status: 'idle', message: '' } });
             const [isTesting, setIsTesting] = useState(false);
 
             useEffect(() => { setLocalSettings(settings); }, [settings]);
@@ -728,24 +761,13 @@
                     if (res.ok) return { status: 'success', message: 'الاتصال ناجح' }; if (res.status === 401) return { status: 'error', message: 'المفتاح غير صالح' }; return { status: 'error', message: `فشل: ${res.statusText}` };
                 } catch (e) { return { status: 'error', message: 'فشل الاتصال (تحقق من الشبكة)' }; }
             };
-            const testCloudinary = async (cloudName) => {
-                 if (!cloudName) return { status: 'error', message: 'يرجى ملء اسم السحابة' };
-                try {
-                    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/ping`);
-                    const data = await res.json();
-                    if (res.ok && data.status === 'ok') return { status: 'success', message: 'الاتصال ناجح' }; return { status: 'error', message: 'اسم السحابة غير صالح' };
-                } catch (e) { return { status: 'error', message: 'فشل الاتصال (تحقق من الاسم)' }; }
-            };
 
             const handleSaveAndTest = async () => {
                 setIsTesting(true); 
                 onSaveSettings(localSettings);
-                setTestResults({ openRouter: { status: 'testing', message: '' }, cloudinary: { status: 'testing', message: '' } });
-                const [orResult, clResult] = await Promise.all([
-                    testOpenRouter(localSettings.openRouterKey, localSettings.openRouterModel),
-                    testCloudinary(localSettings.cloudinaryCloudName)
-                ]);
-                setTestResults({ openRouter: orResult, cloudinary: clResult });
+                setTestResults({ openRouter: { status: 'testing', message: '' } });
+                const orResult = await testOpenRouter(localSettings.openRouterKey, localSettings.openRouterModel);
+                setTestResults({ openRouter: orResult });
                 setIsTesting(false);
             };
 
@@ -753,12 +775,11 @@
                 h_react('h3', { className: "text-xl font-semibold text-white border-b border-white/20 pb-2 mb-4" }, title), h_react('p', { className: "text-white/80 mb-4 text-sm" }, description), h_react('div', null, children)
             );
 
-            return h_react('div', { className: "animate-fade-in" },
+            return h_react('div', { className: "animate-fade-in-page" },
                 h_react('div', { className: "flex flex-col sm:flex-row items-center justify-between mb-6 gap-4" }, h_react('h2', { className: "text-3xl font-bold text-white" }, "الإعدادات والأمان"), h_react(Button, { onClick: onShowMain, variant: 'secondary', className: 'w-full sm:w-auto' }, h_react(IconArrowRight), "رجوع للرئيسية")),
                 h_react(SettingCard, { title: "الاتصالات والخدمات السحابية", description: "أدخل مفاتيح API الخاصة بك للخدمات الخارجية. سيتم اختبارها عند الحفظ." },
                     h_react('div', { className: "space-y-6 w-full" },
                         h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "OpenRouter.ai"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "API Key", id: "openRouterKey", name: "openRouterKey", value: localSettings.openRouterKey, onChange: handleChange, type: "password", ...testResults.openRouter }), h_react(ApiInput, { label: "Model Name", id: "openRouterModel", name: "openRouterModel", value: localSettings.openRouterModel, onChange: handleChange, ...testResults.openRouter }))),
-                        h_react('fieldset', { className: "border border-white/30 rounded-lg p-4" }, h_react('legend', { className: "px-2 text-white/90 font-medium" }, "Cloudinary"), h_react('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4" }, h_react(ApiInput, { label: "Cloud Name", id: "cloudinaryCloudName", name: "cloudinaryCloudName", value: localSettings.cloudinaryCloudName, onChange: handleChange, ...testResults.cloudinary }), h_react(ApiInput, { label: "Upload Preset", id: "cloudinaryPreset", name: "cloudinaryPreset", value: localSettings.cloudinaryPreset, onChange: handleChange, status: 'idle' }))),
                         h_react(Button, { onClick: handleSaveAndTest, variant: 'primary', disabled: isTesting, className: "mt-4 w-full sm:w-auto" }, isTesting ? h_react(IconSpinner, { className: "w-5 h-5" }) : h_react(IconSave), isTesting ? "جاري الحفظ والاختبار..." : "حفظ واختبار الاتصالات")
                     )
                 ),
@@ -777,11 +798,29 @@
             );
         };
 
-        // --- MainApp Component ---
-        function MainApp({ initialData, user, onLogout }) {
-            const [state, dispatch] = useReducer(appReducer, { ...initialData, isLoading: false }); 
+        // --- Main App Component ---
+        function App() {
+            const [state, dispatch] = useReducer(appReducer, initialState); 
             const [categoryModal, setCategoryModal] = useState({ isOpen: false, category: null });
             const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+            useEffect(() => {
+                async function loadData() {
+                    try {
+                        await idbHelper.initDB();
+                        const data = await idbHelper.loadData();
+                        dispatch({ type: 'LOAD_SUCCESS', payload: data || { categories: [], settings: initialState.settings, lastBackup: null } });
+                    } catch (err) { 
+                        console.error(err); 
+                        dispatch({ type: 'LOAD_FAILURE', payload: "فشل تحميل البيانات من IndexedDB" }); 
+                    }
+                }
+                loadData();
+                (async () => {
+                    if (navigator.storage && navigator.storage.persist) { if (!(await navigator.storage.persisted())) dispatch({ type: 'SET_INCOGNITO_WARNING' }); }
+                    else { try { localStorage.setItem('__test_storage__', '1'); localStorage.removeItem('__test_storage__'); } catch (e) { dispatch({ type: 'SET_INCOGNITO_WARNING' }); } }
+                })();
+            }, []);
 
             useEffect(() => {
                 if (state.isLoading || !state.isDirty) return;
@@ -790,20 +829,13 @@
                     .then(() => dispatch({ type: 'SET_DIRTY', payload: false }))
                     .catch(err => { console.error("Failed to save to IDB:", err); showNotification('error', "فشل الحفظ التلقائي في المتصفح"); });
                 if (state.fsHandle) autoSaveToFile(state.fsHandle, JSON.stringify(dataToSave, null, 2));
-            }, [state.categories, state.settings, state.isDirty, state.fsHandle, state.isLoading]);
+            }, [state.categories, state.settings, state.lastBackup, state.isDirty, state.fsHandle, state.isLoading]);
             
             useEffect(() => {
                 const handleBeforeUnload = (e) => { if (state.isDirty) { e.preventDefault(); e.returnValue = 'لديك تغييرات غير محفوظة. هل أنت متأكد من المغادرة؟'; } };
                 window.addEventListener('beforeunload', handleBeforeUnload);
                 return () => window.removeEventListener('beforeunload', handleBeforeUnload);
             }, [state.isDirty]);
-            
-            useEffect(() => {
-                 (async () => {
-                    if (navigator.storage && navigator.storage.persist) { if (!(await navigator.storage.persisted())) dispatch({ type: 'SET_INCOGNITO_WARNING' }); }
-                    else { try { localStorage.setItem('__test_storage__', '1'); localStorage.removeItem('__test_storage__'); } catch (e) { dispatch({ type: 'SET_INCOGNITO_WARNING' }); } }
-                })();
-            }, []);
 
             // --- Handlers ---
             const showNotification = (type, message) => {
@@ -826,7 +858,10 @@
                 reader.onload = (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
-                        if (data && data.categories) { dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: data }); showNotification('success', "تم استعادة البيانات بنجاح"); }
+                        if (data && (data.categories || data.settings)) { 
+                            dispatch({ type: 'SET_STATE_FROM_BACKUP', payload: data }); 
+                            showNotification('success', "تم استعادة البيانات بنجاح"); 
+                        }
                         else throw new Error("ملف غير صالح");
                     } catch (err) { console.error(err); showNotification('error', "فشل قراءة الملف."); }
                 };
@@ -846,7 +881,10 @@
             const handlePrint = () => window.print();
             const handleDeleteAll = () => {
                 idbHelper.clearData()
-                    .then(() => { dispatch({ type: 'DELETE_ALL_DATA' }); showNotification('success', "تم حذف جميع البيانات"); })
+                    .then(() => { 
+                        dispatch({ type: 'DELETE_ALL_DATA' }); 
+                        showNotification('success', "تم حذف جميع البيانات (ما عدا الإعدادات)"); 
+                    })
                     .catch(err => { console.error(err); showNotification('error', "فشل حذف البيانات"); })
                     .finally(() => setConfirmDeleteAll(false));
             };
@@ -883,7 +921,7 @@
                 switch (state.currentView) {
                     case 'main':
                         return h_react(Fragment, null,
-                            h_react(Header, { onSearch: (term) => dispatch({ type: 'SET_SEARCH', payload: term }), onAddCategory: openAddCategory, onShowSettings: () => dispatch({ type: 'SET_VIEW', payload: 'settings' }), onShowDashboard: () => dispatch({ type: 'SET_VIEW', payload: 'dashboard' }), user, onLogout }),
+                            h_react(Header, { onSearch: (term) => dispatch({ type: 'SET_SEARCH', payload: term }), onAddCategory: openAddCategory, onShowSettings: () => dispatch({ type: 'SET_VIEW', payload: 'settings' }), onShowDashboard: () => dispatch({ type: 'SET_VIEW', payload: 'dashboard' }) }),
                             h_react('main', { className: "container mx-auto px-4" }, h_react(CategoryListScreen, { categories: filteredCategories, onSelectCategory: (id) => dispatch({ type: 'SET_VIEW', payload: 'categoryDetail', categoryId: id }), onEditCategory: openEditCategory, onDeleteCategory: handleDeleteCategory }))
                         );
                     case 'dashboard':
@@ -895,7 +933,8 @@
                                 categories: state.categories, 
                                 onBack: () => dispatch({ type: 'SET_VIEW', payload: 'main' }), 
                                 dispatch: dispatch,
-                                settings: state.settings
+                                settings: state.settings,
+                                onNotify: showNotification // Pass notification handler
                             })
                         );
                     case 'settings':
@@ -918,6 +957,7 @@
             
             // --- App Render ---
             return h_react('div', { className: "min-h-screen pb-28 print-container" },
+                state.isLoading ? h_react(FullScreenSpinner) :
                 state.error ? h_react('p', { className: "text-center text-red-300 p-10" }, state.error) :
                 renderCurrentView(),
                 h_react(StatusBar, { lastBackup: state.lastBackup, showWarning: state.showIncognitoWarning }),
@@ -932,165 +972,10 @@
             );
         }
 
-        // --- Root Component (Bootstrapper) ---
-        function Root() {
-            const [appStatus, setAppStatus] = useState('loading'); // 'loading', 'needsConfig', 'needsAuth', 'authenticated'
-            const [supabaseClient, setSupabaseClient] = useState(null);
-            const [user, setUser] = useState(null);
-            const [allData, setAllData] = useState(initialState);
-            const [error, setError] = useState(null);
-
-            // 1. Load data from IDB on initial mount (with localStorage fallback)
-            useEffect(() => {
-                async function loadData() {
-                    try {
-                        await idbHelper.initDB();
-                        const data = await idbHelper.loadData();
-                        let effectiveData = data || initialState;
-                        
-                        let sbUrl = effectiveData.settings.supabaseUrl;
-                        let sbKey = effectiveData.settings.supabaseAnonKey;
-
-                        // --- [START] VERCEL FALLBACK LOGIC ---
-                        if (!sbUrl || !sbKey) {
-                            console.log("IDB config missing, checking localStorage...");
-                            const lsUrl = localStorage.getItem('supabaseUrl');
-                            const lsKey = localStorage.getItem('supabaseKey');
-
-                            if (lsUrl && lsKey) {
-                                console.log("Config found in localStorage. Applying.");
-                                sbUrl = lsUrl;
-                                sbKey = lsKey;
-                                effectiveData = {
-                                    ...effectiveData,
-                                    settings: {
-                                        ...effectiveData.settings,
-                                        supabaseUrl: sbUrl,
-                                        supabaseAnonKey: sbKey
-                                    }
-                                };
-                                await idbHelper.saveData(effectiveData); // Resync to IDB
-                            }
-                        }
-                        // --- [END] VERCEL FALLBACK LOGIC ---
-
-                        setAllData(effectiveData); // Set state with whatever was found
-
-                        if (sbUrl && sbKey) {
-                            // We have keys (from IDB or LS), let's try to init
-                            const client = createClient(sbUrl, sbKey);
-                            setSupabaseClient(client);
-                            const { data: { session } } = await client.auth.getSession();
-                            if (session) {
-                                setUser(session.user);
-                                setAppStatus('authenticated');
-                            } else {
-                                setAppStatus('needsAuth');
-                            }
-                        } else {
-                            // No keys found anywhere
-                            setAppStatus('needsConfig');
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        setError("فشل تحميل البيانات من المتصفح.");
-                        setAppStatus('needsConfig'); // Fallback to config
-                    }
-                }
-                loadData();
-            }, []);
-
-            // 2. Listen for auth state changes (login/logout)
-            useEffect(() => {
-                if (!supabaseClient) return;
-                
-                const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-                    if (session) {
-                        setUser(session.user);
-                        setAppStatus('authenticated');
-                    } else {
-                        setUser(null);
-                        setAppStatus('needsAuth');
-                    }
-                });
-
-                return () => subscription.unsubscribe();
-            }, [supabaseClient]);
-
-            // --- [START] MODIFIED onConfigSaved ---
-            const onConfigSaved = (url, key) => {
-                try {
-                    const client = createClient(url, key);
-                    setSupabaseClient(client);
-                    setAppStatus('needsAuth');
-                    const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: url, supabaseAnonKey: key } };
-                    setAllData(newData);
-                    
-                    // Save to IDB (existing)
-                    idbHelper.saveData(newData); 
-                    
-                    // Save to localStorage (NEW)
-                    localStorage.setItem('supabaseUrl', url);
-                    localStorage.setItem('supabaseKey', key);
-
-                } catch (err) {
-                    console.error(err);
-                    setError("فشل تهيئة Supabase. تأكد من البيانات.");
-                }
-            };
-            // --- [END] MODIFIED onConfigSaved ---
-
-            // --- [START] MODIFIED onClearConfig ---
-            const onClearConfig = () => {
-                setSupabaseClient(null);
-                setUser(null);
-                setAppStatus('needsConfig');
-                const newData = { ...allData, settings: { ...allData.settings, supabaseUrl: '', supabaseAnonKey: '' } };
-                setAllData(newData);
-                
-                // Clear from IDB (existing)
-                idbHelper.saveData(newData); 
-
-                // Clear from localStorage (NEW)
-                localStorage.removeItem('supabaseUrl');
-                localStorage.removeItem('supabaseKey');
-            };
-            // --- [END] MODIFIED onClearConfig ---
-
-            const handleLogout = () => {
-                if (supabaseClient) {
-                    supabaseClient.auth.signOut();
-                }
-            };
-
-            // Render based on app status
-            if (appStatus === 'loading') {
-                return h_react(FullScreenSpinner);
-            }
-            
-            if (appStatus === 'needsConfig') {
-                return h_react(SupabaseConfigScreen, { onConfigSaved: onConfigSaved });
-            }
-            
-            if (appStatus === 'needsAuth') {
-                return h_react(LoginScreen, { supabaseClient: supabaseClient, onClearConfig: onClearConfig });
-            }
-            
-            if (appStatus === 'authenticated' && user) {
-                return h_react(MainApp, { 
-                    initialData: allData,
-                    user: user, 
-                    onLogout: handleLogout
-                });
-            }
-
-            return h_react(FullScreenSpinner);
-        }
-
         // --- Mount App ---
         const rootElement = document.getElementById('root');
         const root = createRoot(rootElement);
-        root.render(h_react(Root)); 
+        root.render(h_react(App)); 
 
     </script>
 </body>
